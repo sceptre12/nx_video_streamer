@@ -1,5 +1,3 @@
-# globals
+# protos
 
 This library was generated with [Nx](https://nx.dev).
-
-NOTHING HERE YET

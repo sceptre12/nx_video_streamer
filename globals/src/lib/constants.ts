@@ -1,0 +1,1 @@
+export const VIDEO_PROTO_PATH = __dirname + "../../../protos/src/gen/src/proto/video/v1/video_pb.ts";

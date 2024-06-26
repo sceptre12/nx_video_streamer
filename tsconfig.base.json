@@ -16,8 +16,12 @@
     "baseUrl": ".",
     "paths": {
       "@nx-video-streamer/globals": ["globals/src/index.ts"],
+      "@nx-video-streamer/protos": ["protos/src/index.ts"],
       "app1/Module": ["apps/app1/src/remote-entry.ts"],
-      "app2/Module": ["apps/app2/src/remote-entry.ts"]
+      "app2/Module": ["apps/app2/src/remote-entry.ts"],
+      "@globals/constants": ["globals/src/lib/constants.ts"],
+      "@generated/protobuf-types": ["protos/libs/gen/protobuf-types/video.ts"],
+      "@generated/protobuf-src": ["protos/libs/gen/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package src.video.v1;
+
+// https://protobuf.dev/programming-guides/proto3/#services
+// Service allows us to define an RPC interface
+service DbComService {
+  // Queries the db for all of the videos and returns the objects
+  rpc GetVideos(GetVideosRequest) returns (GetVideosResponse);
+  rpc GetVideo(GetVideoRequest) returns (GetVideoResponse);
+  rpc CreateVideo(CreateVideoRequest) returns (CreateVideoResponse);
+  rpc StopUploadStream(StopUploadStreamRequest) returns (StopUploadStreamResponse);
+  rpc StartVideoStream(StartVideoStreamRequest) returns (StartVideoStreamResponse);
+}
+
+message VideoItem {
+  string video_id = 1;
+  int32 start_time = 2;
+  optional int32 end_time = 3;
+  bool is_streaming = 4;
+  optional string thumbnail_path = 5;
+  optional string video_path = 6;
+}
+
+
+
+// https://protobuf.dev/programming-guides/proto3/#simple
+// Allows us to shape the message we want to send
+message GetVideosRequest {
+  optional int32 limit_by = 1;
+}
+
+message GetVideosResponse{
+  repeated VideoItem results = 1;
+}
+
+message GetVideoRequest{
+  string video_id = 1;
+}
+
+message GetVideoResponse {
+  string video_id = 1;
+  int32 start_time = 2;
+  optional int32 end_time = 3;
+  bool is_streaming = 4;
+  optional string thumbnail_path = 5;
+  optional string video_path = 6;
+}
+
+message CreateVideoRequest{
+  string video_id = 1;
+  int32 start_time = 2;
+}
+
+message CreateVideoResponse{
+  VideoItem results = 1;
+}
+
+// Message to update the db to indicate the user has stopped streaming
+message StopUploadStreamRequest{
+  string video_id = 1;
+  int32 end_time = 2;
+}
+
+// Response from the Db indicating if the update was a success or not
+message StopUploadStreamResponse{
+  bool has_ended = 1;
+}
+
+// This is used to send a request to start streaming the video
+message StartVideoStreamRequest{
+  string video_id = 1;
+}
+
+// Not sure what should be returned atm
+message StartVideoStreamResponse{
+
+}

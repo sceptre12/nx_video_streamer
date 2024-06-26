@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import { app } from './app/app';
+import {launchGrpcClient} from './app/grpc'
 
 const host = process.env.HOST ?? 'localhost';
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -21,3 +22,4 @@ server.listen({ port, host }, (err) => {
     console.log(`[ ready ] http://${host}:${port}`);
   }
 });
+launchGrpcClient();

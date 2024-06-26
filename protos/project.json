@@ -1,0 +1,42 @@
+{
+  "name": "protos",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "protos/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project protos --web",
+  "targets": {
+    "generate_protos":{
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "protos",
+        "commands": [
+          "buf generate"
+        ]
+      }
+    },
+    "build_types": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["generate_protos"],
+      "options": {
+        "cwd": "protos",
+        "commands": [
+          "proto-loader-gen-types --longs=String --enums=String --defaults --oneofs --grpcLib=@grpc/grpc-js --outDir ./libs/gen/protobuff-types ./src/video/**/*.proto "
+        ]
+      }
+    },
+    "build":{
+      "command": "echo Generated Protos and Build types",
+      "dependsOn": ["build_types"]
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "protos",
+        "commands": [
+          "buf lint"
+        ]
+      }
+    }
+  }
+}

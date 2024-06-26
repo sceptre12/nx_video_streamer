@@ -1,0 +1,9 @@
+# Learn more: https://docs.buf.build/configuration/v1/buf-gen-yaml
+version: v2
+plugins:
+   - remote: buf.build/bufbuild/es
+     opt: target=ts
+     out: libs/gen
+   - remote: buf.build/connectrpc/es
+     out: libs/gen
+     opt: target=ts

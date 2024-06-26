@@ -4,6 +4,7 @@
   "sourceRoot": "apps/app-server/src",
   "projectType": "application",
   "tags": [],
+  "implicitDependencies": ["protos"],
   "targets": {
     "build": {
       "executor": "@nx/esbuild:esbuild",
