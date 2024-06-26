@@ -21,7 +21,7 @@
       "options": {
         "cwd": "protos",
         "commands": [
-          "proto-loader-gen-types --longs=String --enums=String --defaults --oneofs --grpcLib=@grpc/grpc-js --outDir ./libs/gen/protobuff-types ./src/video/**/*.proto "
+          "proto-loader-gen-types --longs=String --enums=String --defaults --oneofs --grpcLib=@grpc/grpc-js --outDir ./libs/gen/protobuf-types ./src/video/**/*.proto "
         ]
       }
     },

@@ -1,6 +1,7 @@
 import {VIDEO_PROTO_PATH} from '@globals/constants';
 import grpc from "@grpc/grpc-js";
 import protoLoader from '@grpc/proto-loader'
+import type {ProtoGrpcType} from '@generated/protobuf-types';
 
 
 export const launchGrpcClient = () =>{
