@@ -11,8 +11,7 @@ provides an interactive UI to view your projects, run tasks, generate code, and 
 comes with a LSP for Vim users.
 
 ## Requirement 
-MAC OS
-brew install npx
+MAC OS `brew install npx`
 
 ## Start the application
 
