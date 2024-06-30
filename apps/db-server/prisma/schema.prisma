@@ -9,12 +9,12 @@ datasource db {
 }
 
 model Video {
-  video_id       String    @unique
-  start_time     DateTime
-  end_time       DateTime?
-  is_streaming   Boolean   @default(true)
-  thumbnail_path String?   @unique
-  video_path     String?   @unique
+  video_id       String  @unique
+  start_time     BigInt
+  end_time       BigInt?
+  is_streaming   Boolean @default(true)
+  thumbnail_path String? @unique
+  video_path     String? @unique
 
   @@id([video_id])
 }

@@ -4,9 +4,11 @@ import * as protoLoader from '@grpc/proto-loader'
 import { GRPC_PORT } from '@globals/constants';
 import type {ProtoGrpcType} from '@generated/protobuf-types';
 
+import { handleCreatingVideoService } from './services/handleCreatingVideo';
 
-const createGrpcClient = () => {
-  console.log("Setting up Grpc Client");
+
+const launchGrpcServer = () => {
+  console.log("Setting up Grpc Server");
 
   const packageDefinition = protoLoader.loadSync(VIDEO_PROTO_PATH, {
     keepCase: true,
@@ -20,11 +22,19 @@ const createGrpcClient = () => {
 
   const VIDEO_PROTO = (grpc.loadPackageDefinition(packageDefinition) as unknown) as ProtoGrpcType;
 
-  return new VIDEO_PROTO.src.video.v1.DbComService(`localhost:${GRPC_PORT}`, grpc.credentials.createInsecure());
+  const grpcServer = new grpc.Server();
+
+  // Register Services
+  grpcServer.addService(VIDEO_PROTO.src.video.v1.DbComService.service, {
+    CreateVideo: handleCreatingVideoService
+  });
+
+
+  grpcServer.bindAsync(`0.0.0.0:${GRPC_PORT}`, grpc.ServerCredentials.createInsecure(), () =>{
+    grpcServer.start()
+    console.log("Launched Grpc Server")
+  })
 }
 
-const videoGrpcClient = createGrpcClient();
 
-console.log("\nGrpc client created\n");
-
-export default videoGrpcClient;
+launchGrpcServer();

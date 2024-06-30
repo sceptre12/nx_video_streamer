@@ -1,13 +1,15 @@
 import Fastify from 'fastify';
 import { app } from './app/app';
-import {launchGrpcClient} from './app/grpc'
+// import "./app/grpc";
 
 const host = process.env.HOST ?? 'localhost';
-const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+const port = process.env.PORT ? Number(process.env.PORT) : 3002;
 
 // Instantiate Fastify with some config
 const server = Fastify({
-  logger: true,
+  logger: {
+    level: 'info',
+  },
 });
 
 // Register your application as a normal plugin.
@@ -22,4 +24,3 @@ server.listen({ port, host }, (err) => {
     console.log(`[ ready ] http://${host}:${port}`);
   }
 });
-launchGrpcClient();

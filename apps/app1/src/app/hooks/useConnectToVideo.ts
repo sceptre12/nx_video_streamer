@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import * as dayjs from 'dayjs';
 import type {MediaObjectType} from '../app'
 import type { RefObject } from "react";
+import {createVideo} from '../api'
 
 
 
@@ -21,7 +22,7 @@ export const useConnectToVideo = ({videoRef, setMediaObject}: useConnectToVideoP
       if (isVideoOn) {
         const mediaDevices = navigator.mediaDevices;
 
-        // videoRefCopy.muted = true;
+        videoRefCopy.muted = true;
         
         (async () => {
           const stream = await mediaDevices.getUserMedia({
@@ -32,15 +33,27 @@ export const useConnectToVideo = ({videoRef, setMediaObject}: useConnectToVideoP
           if (isMounted) {
             if (stream) {
               videoRefCopy.srcObject = stream;
-              videoRefCopy.addEventListener('loadedmetadata', () => {
+              videoRefCopy.addEventListener('loadedmetadata', async () => {
                 if (videoRefCopy && isMounted) {
-                  videoRefCopy.play();
-                  setMediaObject((prevState )=> ({ 
-                    ...prevState,
-                    is_streaming: true,
-                    video_id: stream.id,
-                    start_time: dayjs().unix(),
+                  /**
+                   * Store video info in db and prep everything for streaming
+                   */
+                  const {data, error} = await createVideo({video_id: stream.id ,start_time: dayjs().unix()});
+                  if(error){
+                    console.error(error);
+                  }else if (data){
+                    console.log("data",data);
+                    // Update the media object with the info from the server
+                    // Triggers the streaming event
+                    setMediaObject((prevState )=> ({ 
+                      ...prevState,
+                      stream,
+                      is_streaming: data.is_streaming,
+                      video_id: data.video_id,
+                      start_time: data.start_time,
+                      video_path: data.video_path
                   }));
+                  }
                 }
               });
             }
@@ -53,11 +66,6 @@ export const useConnectToVideo = ({videoRef, setMediaObject}: useConnectToVideoP
       isMounted = false;
       if(isVideoOn && videoRefCopy?.srcObject){
         cleanUpVideo(videoRefCopy)
-        setMediaObject((prevState )=> ({ 
-          ...prevState,
-          is_streaming: false,
-          end_time: dayjs().unix(),
-        }))
       }
     };
   }, [isVideoOn, videoRef, setMediaObject]);
@@ -76,10 +84,12 @@ function cleanUpVideo(videoRef: HTMLVideoElement ){
   // We're turning off the video
   const stream = videoRef.srcObject as MediaStream;
   if (stream) {
+    console.log("HEREEEEE")
     const tracks = stream.getTracks();
 
     // Iterate through each track and stop them
     tracks.forEach((track) => {
+      console.log("Track",track);
       track.stop();
     });
 

@@ -43,3 +43,6 @@ Thumbs.db
 
 #Environment files
 .env
+
+#local video storage
+apps/db-server/storage
