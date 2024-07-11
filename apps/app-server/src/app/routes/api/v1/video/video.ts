@@ -2,34 +2,31 @@
  * This file handles CRUD request to
  * /api/v1/video
  */
-import {createVideoOpts} from './video_schema'
+import {createVideoOpts, updateVideoStreamingStateOpts} from './video_schema'
 import { FastifyInstance } from 'fastify';
-import type {ICreateVideoBody} from './video_schema'
-import { createVideo } from './../../../../grpc/services/createVideo';
+import type {ICreateVideoBody, IUpdateVideoStreamingStateBody, IUpdateVideoStreamingStateParams} from './video_schema'
+import { createVideo, updateVideoStreamingState } from './../../../../grpc/services';
 import { errorHandler } from '../../../utils/errorHandler';
 import type { CreateVideoResponse } from 'protos/libs/gen/protobuf-types/src/video/v1/CreateVideoResponse';
+import type { UpdateVideoStreamingStateResponse } from 'protos/libs/gen/protobuf-types/src/video/v1/UpdateVideoStreamingStateResponse';
 
 
 export default async function(fastify: FastifyInstance) {
-  
 
   fastify.post<{Body: ICreateVideoBody}>('/create',createVideoOpts, async (request, reply) =>{
     const {video_id, start_time } = request.body
 
-    console.log("MEssage", request.body)
+    console.log("CREATE SOMETHING")
     
     const createVideoErrorHandler = errorHandler({reply});
 
     const sendSuccessMessageToClient = (response : CreateVideoResponse) => {
-      console.log("How many timesss");
       try{
         reply.send({
           version: 'v1',
           ...response.results
         })
-        console.log("ANY ISSUESSS")
       }catch(error) {
-        console.log("WE SENDING ERRORRR");
         createVideoErrorHandler({error, handleByParent: true});
       }
     }
@@ -47,11 +44,34 @@ export default async function(fastify: FastifyInstance) {
 
 
 
-  fastify.post('/:video_id', async (request,reply) =>{
+  fastify.post<{Body: IUpdateVideoStreamingStateBody, Params: IUpdateVideoStreamingStateParams }>('/:video_id',updateVideoStreamingStateOpts, async (request,reply) =>{
     const {video_id} = request.params;
     // This can be expaneded over time
     const {has_streaming_started} = request.body
 
-    
+    console.log("UPDATED SOMETHING")
+
+    const updateVideoStreamHandler = errorHandler({reply});
+
+
+    const sendSuccessMessageToClient = (response : UpdateVideoStreamingStateResponse) => {
+      try{
+        reply.send({
+          version: 'v1',
+          ...response
+        })
+      }catch(error) {
+        updateVideoStreamHandler({error, handleByParent: true});
+      }
+    }
+
+    await updateVideoStreamingState({
+      requestObject: {
+        video_id,
+        has_streaming_started
+      },
+      callBack: sendSuccessMessageToClient,
+      errorHandler: updateVideoStreamHandler
+    })
   })
 }

@@ -22,3 +22,30 @@ export const createVideoOpts: RouteShorthandOptions = {
     }
   }
 }
+
+export interface IUpdateVideoStreamingStateBody{
+  has_streaming_started: boolean;
+}
+
+export interface IUpdateVideoStreamingStateParams{
+  video_id: string;
+}
+
+export const updateVideoStreamingStateOpts: RouteShorthandOptions = {
+  schema: {
+    body: {
+      type: 'object',
+      properties: {
+        has_streaming_started: {type: 'boolean'}
+      },
+      required: ['has_streaming_started']
+    },
+    params: {
+      type: 'object',
+      properties: {
+        video_id: {type: 'string'}
+      },
+      required: ['video_id']
+    }
+  }
+}

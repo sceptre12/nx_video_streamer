@@ -74,6 +74,86 @@ export class VideoItem extends Message<VideoItem> {
 }
 
 /**
+ * @generated from message src.video.v1.UpdateVideoStreamingStateRequest
+ */
+export class UpdateVideoStreamingStateRequest extends Message<UpdateVideoStreamingStateRequest> {
+  /**
+   * @generated from field: string video_id = 1;
+   */
+  videoId = "";
+
+  /**
+   * @generated from field: bool has_streaming_started = 2;
+   */
+  hasStreamingStarted = false;
+
+  constructor(data?: PartialMessage<UpdateVideoStreamingStateRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "src.video.v1.UpdateVideoStreamingStateRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "video_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "has_streaming_started", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateVideoStreamingStateRequest {
+    return new UpdateVideoStreamingStateRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateVideoStreamingStateRequest {
+    return new UpdateVideoStreamingStateRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateVideoStreamingStateRequest {
+    return new UpdateVideoStreamingStateRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateVideoStreamingStateRequest | PlainMessage<UpdateVideoStreamingStateRequest> | undefined, b: UpdateVideoStreamingStateRequest | PlainMessage<UpdateVideoStreamingStateRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateVideoStreamingStateRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message src.video.v1.UpdateVideoStreamingStateResponse
+ */
+export class UpdateVideoStreamingStateResponse extends Message<UpdateVideoStreamingStateResponse> {
+  /**
+   * @generated from field: bool update_complete = 1;
+   */
+  updateComplete = false;
+
+  constructor(data?: PartialMessage<UpdateVideoStreamingStateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "src.video.v1.UpdateVideoStreamingStateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "update_complete", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateVideoStreamingStateResponse {
+    return new UpdateVideoStreamingStateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateVideoStreamingStateResponse {
+    return new UpdateVideoStreamingStateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateVideoStreamingStateResponse {
+    return new UpdateVideoStreamingStateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateVideoStreamingStateResponse | PlainMessage<UpdateVideoStreamingStateResponse> | undefined, b: UpdateVideoStreamingStateResponse | PlainMessage<UpdateVideoStreamingStateResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateVideoStreamingStateResponse, a, b);
+  }
+}
+
+/**
  * https://protobuf.dev/programming-guides/proto3/#simple
  * Allows us to shape the message we want to send
  *

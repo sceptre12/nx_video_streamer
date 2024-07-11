@@ -1,15 +1,15 @@
-import type { CreateVideoResponse } from 'protos/libs/gen/protobuf-types/src/video/v1/CreateVideoResponse';
 import videoGrpcClient from '../index'
 import { ErrorResponseParam } from '../../routes/utils/errorHandler';
+import { UpdateVideoStreamingStateResponse } from 'protos/libs/gen/protobuf-types/src/video/v1/UpdateVideoStreamingStateResponse';
 
 
 
-interface CreateVideoParams {
+interface UpdateVideoStreamingStateParams {
   requestObject: {
     video_id: string;
-    start_time: number;
+    has_streaming_started: boolean;
   },
-  callBack: (arg: CreateVideoResponse) => void,
+  callBack: (arg: UpdateVideoStreamingStateResponse) => void,
   errorHandler: (arg: ErrorResponseParam) => void
 }
 
@@ -19,38 +19,38 @@ interface CreateVideoParams {
  * and store the video thumbnail
  * @param param0 
  */
-export const createVideo = async ({requestObject: {video_id, start_time},callBack, errorHandler}: CreateVideoParams) =>{
+export const updateVideoStreamingState = async ({requestObject: {video_id, has_streaming_started},callBack, errorHandler}: UpdateVideoStreamingStateParams) =>{
   return new Promise((resolve,reject) =>{
     try{
-      videoGrpcClient.CreateVideo({
+      videoGrpcClient.UpdateVideoStreamingState({
         /**
          * The reason there's a differnece in keys for the message is due to how the protobufs are
          * being generated. I need to make sure the generated output keeps the snake_case
          * The typings for the protobufs have the wrong format
          */
         // @ts-ignore
-        video_id: video_id, start_time: start_time
+        video_id, has_streaming_started
       }, (err, response) =>{
         if(err){
+          console.log("updateVideoStreamingState e1",err);
           errorHandler({error: err});
           return;
         }
         // @ts-ignore
-        const {is_streaming, video_path, thumbnail_path } = response.results
+        const {update_complete} = response
         try{
           callBack({
-            results: {
-              // @ts-ignore
-              video_id, start_time,
-              is_streaming, video_path, thumbnail_path
-            }
+            // @ts-ignore
+            update_complete
           });
           resolve(null);
         }catch(error){
+          console.log("updateVideoStreamingState e2",error)
           errorHandler({error});
         } 
       });
     }catch (error){
+      console.log("updateVideoStreamingState e3",error);
       errorHandler({error})
       reject(error);
     }

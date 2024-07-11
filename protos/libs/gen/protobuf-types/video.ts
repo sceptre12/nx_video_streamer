@@ -22,6 +22,8 @@ export interface ProtoGrpcType {
         StartVideoStreamResponse: MessageTypeDefinition
         StopUploadStreamRequest: MessageTypeDefinition
         StopUploadStreamResponse: MessageTypeDefinition
+        UpdateVideoStreamingStateRequest: MessageTypeDefinition
+        UpdateVideoStreamingStateResponse: MessageTypeDefinition
         VideoItem: MessageTypeDefinition
       }
     }

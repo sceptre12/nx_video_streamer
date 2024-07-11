@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateVideoRequest, CreateVideoResponse, GetVideoRequest, GetVideoResponse, GetVideosRequest, GetVideosResponse, StartVideoStreamRequest, StartVideoStreamResponse, StopUploadStreamRequest, StopUploadStreamResponse } from "./video_pb.js";
+import { CreateVideoRequest, CreateVideoResponse, GetVideoRequest, GetVideoResponse, GetVideosRequest, GetVideosResponse, StartVideoStreamRequest, StartVideoStreamResponse, StopUploadStreamRequest, StopUploadStreamResponse, UpdateVideoStreamingStateRequest, UpdateVideoStreamingStateResponse } from "./video_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -42,6 +42,15 @@ export const DbComService = {
       name: "CreateVideo",
       I: CreateVideoRequest,
       O: CreateVideoResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc src.video.v1.DbComService.UpdateVideoStreamingState
+     */
+    updateVideoStreamingState: {
+      name: "UpdateVideoStreamingState",
+      I: UpdateVideoStreamingStateRequest,
+      O: UpdateVideoStreamingStateResponse,
       kind: MethodKind.Unary,
     },
     /**

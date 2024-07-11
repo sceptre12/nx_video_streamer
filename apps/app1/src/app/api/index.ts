@@ -48,9 +48,9 @@ export const createVideo = async ({video_id, start_time}: CreateVideoParams): Pr
 }
 
 
-export const setStreamingHasStarted = async({video_id, has_started}: {video_id: string, has_started: boolean}):Promise<ApiResponse<boolean>> => {
+export const toggleStreamingState = async({video_id, has_started}: {video_id: string, has_started: boolean}):Promise<ApiResponse<boolean>> => {
   try{
-    const result = await resolveJson<{success: boolean}>(fetch(`http://localhost:${APP_SERVER_PORT}/api/${API_VERSION}/video/:${video_id}`,{
+    const result = await resolveJson<{success: boolean}>(fetch(`http://localhost:${APP_SERVER_PORT}/api/${API_VERSION}/video/${video_id}`,{
       method: 'POST',
       body: JSON.stringify({
         has_streaming_started: has_started

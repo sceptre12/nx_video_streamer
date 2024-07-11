@@ -34,10 +34,11 @@ export const createWriteSteamInstance = (path: string) =>{
     }else{
       throw new Error("Invalid Path");
     }
+    STREAM_STATE_MANAGER.is_stream_active = true;
   }
 } 
 
-export const closeWriteStreamInstance = () =>{
+export const closeWriteStreamInstance = async () =>{
   if(STREAM_STATE_MANAGER.is_stream_active){
     STREAM_STATE_MANAGER.current_stream.end();
   }

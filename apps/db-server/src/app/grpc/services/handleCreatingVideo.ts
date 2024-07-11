@@ -20,7 +20,7 @@ export const handleCreatingVideoService:DbComServiceHandlers['CreateVideo'] = as
   // The typings have the wrong format
   // @ts-ignore
   const {video_id, start_time} = call.request
-  console.log("REQUEESSTTT", call.request);
+  console.log("handleCreatingVideoService MSG", call.request);
   if(video_id && start_time){
     // Check if the folder exists already
     const videoFolderPath = path.join(STORAGE_PATH, video_id);

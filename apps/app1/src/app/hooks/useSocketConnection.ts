@@ -5,7 +5,7 @@ import type { MediaObjectType } from "../app";
 import type {RefObject} from "react";
 import { DB_SERVER_PORT } from "@globals/constants";
 import * as dayjs from 'dayjs';
-import { setStreamingHasStarted } from "../api";
+import { toggleStreamingState } from "../api";
 import type { DefaultEventsMap } from "socket.io/dist/typed-events";
 
 export interface useSocketConnectionParams{
@@ -70,13 +70,13 @@ export const useSocketConnection = ({mediaObject,videoRef, setMediaObject }: use
       // send fetch request with video id indicating streaming has started
       console.log("Sending isStreaming to db");
       (async ()=>{
-        await setStreamingHasStarted({video_id: mediaObject.video_id, has_started: true});
+        await toggleStreamingState({video_id: mediaObject.video_id, has_started: true});
       })()
     }else if (mediaObject.end_time !== -1 && !mediaObject.is_streaming) {
       // send fetch request with video id indicating streaming has stopped
       console.log("Indicating to the db the streaming has ended");
       (async ()=>{
-        await setStreamingHasStarted({video_id: mediaObject.video_id, has_started: false});
+        await toggleStreamingState({video_id: mediaObject.video_id, has_started: false});
       })()
     }
   }, [mediaObject.is_streaming,mediaObject.end_time, mediaObject.video_id])

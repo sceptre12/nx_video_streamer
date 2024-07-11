@@ -9,6 +9,7 @@ service DbComService {
   rpc GetVideos(GetVideosRequest) returns (GetVideosResponse);
   rpc GetVideo(GetVideoRequest) returns (GetVideoResponse);
   rpc CreateVideo(CreateVideoRequest) returns (CreateVideoResponse);
+  rpc UpdateVideoStreamingState(UpdateVideoStreamingStateRequest) returns (UpdateVideoStreamingStateResponse);
   rpc StopUploadStream(StopUploadStreamRequest) returns (StopUploadStreamResponse);
   rpc StartVideoStream(StartVideoStreamRequest) returns (StartVideoStreamResponse);
 }
@@ -22,6 +23,14 @@ message VideoItem {
   optional string video_path = 6;
 }
 
+message UpdateVideoStreamingStateRequest{
+  string video_id = 1;
+  bool has_streaming_started = 2;
+}
+
+message UpdateVideoStreamingStateResponse{
+  bool update_complete = 1;
+}
 
 
 // https://protobuf.dev/programming-guides/proto3/#simple

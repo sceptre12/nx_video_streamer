@@ -68,10 +68,10 @@ server.ready().then(() =>{
     })
 
     // @ts-ignore
-    socket.on('endWebcamStream', (data, ack) =>{
+    socket.on('endWebcamStream', async (data, ack) =>{
       // End the stream.. additional data is provided for more clean up operations
-      console.log("Closing write stream")
-      closeWriteStreamInstance();
+      console.log("Ending video stream")
+      await closeWriteStreamInstance();
       // indicates to the client the write stream has been closed
       ack(true);
     })

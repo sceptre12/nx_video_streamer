@@ -5,6 +5,7 @@ import { GRPC_PORT } from '@globals/constants';
 import type {ProtoGrpcType} from '@generated/protobuf-types';
 
 import { handleCreatingVideoService } from './services/handleCreatingVideo';
+import {handleUpdatingStreamingState} from './services/handleUpdatingStreamingState'
 
 
 const launchGrpcServer = () => {
@@ -26,7 +27,8 @@ const launchGrpcServer = () => {
 
   // Register Services
   grpcServer.addService(VIDEO_PROTO.src.video.v1.DbComService.service, {
-    CreateVideo: handleCreatingVideoService
+    CreateVideo: handleCreatingVideoService,
+    UpdateVideoStreamingState: handleUpdatingStreamingState
   });
 
 
