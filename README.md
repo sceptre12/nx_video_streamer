@@ -1,5 +1,5 @@
 # Welcome to the nx video streamer.
-
+(S/N ) There's a lot going on in this repo. Look at the project.json files, if you're familiar with nx, to figure out how to run things
 I created this project as a way to learn several technoligies on a small scale.
 
 - Nx
@@ -41,6 +41,15 @@ In your .env file create this:
 DATABASE_URL="" # Set this to the Transaction connection pooler string you copied in Step 1
 DIRECT_URL=""  # Set this to the Session connection pooler string you copied in Step 1
 ```
+
+To run this project execute:
+npm install
+
+Execute the following in separate terminals
+npx nx run app1:serve
+npx nx run db-server:serve
+npx nx run app-server:serve 
+
 
 ## Major Technologies I'm focused on 
 
