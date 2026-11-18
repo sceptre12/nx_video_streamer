@@ -33,6 +33,13 @@ export async function startPostgres(prefix: string): Promise<ThrowawayPostgres> 
   const env = dockerEnv();
   const docker = (args: string[]) =>
     execFileSync('docker', args, { env, encoding: 'utf8', stdio: 'pipe' }).trim();
+  try {
+    docker(['version', '--format', '{{.Server.Version}}']);
+  } catch {
+    throw new Error(
+      'docker daemon not reachable: these specs start a throwaway postgres:16 and need a running docker (set DOCKER_HOST or start the daemon); they also need a built dist/apps/db-server/main.js (npx nx build db-server)',
+    );
+  }
   const name = `${prefix}-${randomBytes(4).toString('hex')}`;
   const password = randomBytes(12).toString('hex');
   docker(['run', '-d', '--name', name, '-e', `POSTGRES_PASSWORD=${password}`, '-p', '127.0.0.1::5432', 'postgres:16']);
