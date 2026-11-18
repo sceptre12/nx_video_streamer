@@ -4,9 +4,11 @@
 export interface UpdateVideoStreamingStateRequest {
   'videoId'?: (string);
   'hasStreamingStarted'?: (boolean);
+  'ownerId'?: (string);
 }
 
 export interface UpdateVideoStreamingStateRequest__Output {
   'videoId': (string);
   'hasStreamingStarted': (boolean);
+  'ownerId': (string);
 }
