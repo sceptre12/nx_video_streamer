@@ -108,6 +108,7 @@ describe('video routes', () => {
     const ok = await post(`/api/v1/video/${video_id}`, { has_streaming_started: true }, a.cookie);
     expect(ok.statusCode).toBe(200);
     expect(ok.json().update_complete).toBe(true);
+    expect(ok.json().version).toBe('v1');
     expect((await getRow(video_id, a.user_id))?.is_streaming).toBe(true);
   });
 
@@ -125,6 +126,20 @@ describe('video routes', () => {
     const upd = await post('/api/v1/video/bad.id', { has_streaming_started: true }, u.cookie);
     expect(upd.statusCode).toBe(400);
     expect(upd.json().error.code).toBe('invalid_input');
+  });
+
+  it('answers 500 internal_error when the handler throws a non-validation error', async () => {
+    const u = await login();
+    const mod = await import('../../../../grpc/services/updateVideoStreamingState');
+    const spy = jest.spyOn(mod, 'updateVideoStreamingState').mockRejectedValue(new Error('boom'));
+    try {
+      const res = await post(`/api/v1/video/${rand('thr')}`, { has_streaming_started: true }, u.cookie);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(res.statusCode).toBe(500);
+      expect(res.json().error.code).toBe('internal_error');
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('answers 409 video_exists for a duplicate video_id and db-server stays up', async () => {
