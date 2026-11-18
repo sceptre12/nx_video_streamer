@@ -52,6 +52,9 @@
         }
       }
     },
+    "test": {
+      "dependsOn": ["build"]
+    },
     "prisma-deploy": {
       "executor": "@nx-tools/nx-prisma:deploy"
     },
