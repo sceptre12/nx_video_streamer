@@ -47,7 +47,7 @@ Existing service `DbComService` in protos/src/video/v1/video.proto. Nx project `
 | field numbers | appended only: VideoItem 7,8,9; CreateVideoRequest.owner_id=3; UpdateVideoStreamingStateRequest.owner_id=3; existing numbers untouched | renumbering or reusing a number | contracts/grpc-db.md@2ded721b5b33b467e3531a38b115d85ccf3a5863 |
 | `longs` loader option | `String` (protos/project.json build_types `--longs=String`); int64 crosses as a string | changing the option | contracts/grpc-db.md@2ded721b5b33b467e3531a38b115d85ccf3a5863 |
 | sensitive path | `protos/libs/gen/**` is in sensitive_paths and explicitly in scope for st1 (plan P13 grant.st1.2) | committing any other sensitive path | plans/repo-profile.md sensitive_paths; architecture.md item 5 |
-| regeneration owner | only u2 regenerates `protos/libs/gen/**` in st1 (u28 of st11 committed main's regenerated stubs before st1, from the unchanged proto; plan P0b F15) | any other unit running the generator | architecture.md item 7; plan P5 |
+| regeneration owner | only u2 regenerates `protos/libs/gen/**` in st1 (u28 of st11 pinned the buf remote plugins in protos/buf.gen.yaml before st1 so generation reproduces main's stubs; plan P0b F15) | any other unit running the generator | architecture.md item 7; plan P5 |
 | node prefix | `source ~/.nvm/nvm.sh && nvm use 20.14.0` in every shell call | system node v22.13.0 (node 20.14.0 is installed by the desk before dispatch) | repo-profile.md node.prefix_cmd |
 
 ## 8. Acceptance Criteria
