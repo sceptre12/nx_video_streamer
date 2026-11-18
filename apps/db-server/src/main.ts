@@ -68,6 +68,7 @@ server.ready().then(() =>{
     // Capture state lives on this socket only; cleared on end and on disconnect.
     const user_id = socket.data.user_id as string;
     let session: CaptureSession | undefined;
+    let opening = false;
     const clear = async () => {
       const s = session;
       session = undefined;
@@ -77,13 +78,32 @@ server.ready().then(() =>{
     // @ts-expect-error socket.io event name is not in the typed event map
     socket.on('initalizeStream', async (data: {video_id?: unknown}, ack?: (r: unknown) => void) =>{
       // A client-sent video_path is ignored; the path is derived server-side from the owned video_id.
+      // One open at a time per socket: an overlapping initalizeStream is rejected, so no WriteStream leaks.
+      if (opening) {
+        if (typeof ack === 'function') ack({ok: false, error: 'busy'});
+        return;
+      }
+      opening = true;
+      const opened_ref: {current?: CaptureSession} = {};
       try {
         await clear();
-        session = await openCaptureSession(user_id, data?.video_id as string);
+        const opened = await openCaptureSession(user_id, data?.video_id as string, () => {
+          // Stream failed asynchronously: drop this session (if still current) and release the stream.
+          if (session === opened_ref.current) void clear();
+        });
+        opened_ref.current = opened;
+        if (!socket.connected) {
+          // Disconnected while opening: the disconnect handler found no session, so close it here.
+          await closeCaptureSession(opened);
+          return;
+        }
+        session = opened;
         if (typeof ack === 'function') ack({ok: true});
       } catch (e) {
         const code = (e as {code?: string}).code ?? 'internal';
         if (typeof ack === 'function') ack({ok: false, error: code});
+      } finally {
+        opening = false;
       }
     })
     // @ts-expect-error socket.io event name is not in the typed event map

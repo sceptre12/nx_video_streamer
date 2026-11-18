@@ -33,12 +33,22 @@ export const resolveCapturePath = (video_id: string): string => {
 };
 
 /** Owner check goes through the owner-filtered helper: a legacy owner_id NULL row never matches. */
-export const openCaptureSession = async (user_id: string, video_id: string): Promise<CaptureSession> => {
+export const openCaptureSession = async (
+  user_id: string,
+  video_id: string,
+  on_error?: (err: Error) => void,
+): Promise<CaptureSession> => {
   const target = resolveCapturePath(video_id);
   const row = await getVideoForOwner(video_id, user_id);
   if (!row) throw new CaptureError('not_found', 'video not found');
   await mkdir(path.dirname(target), { recursive: true });
-  return { user_id, video_id, stream: createWriteStream(target) };
+  const stream = createWriteStream(target);
+  // An async fs error (ENOSPC, EACCES) must not become an uncaught exception that kills the server.
+  stream.on('error', (err) => {
+    console.error(`capture stream error for video ${video_id}: ${err.message}`);
+    on_error?.(err);
+  });
+  return { user_id, video_id, stream };
 };
 
 const toBuffer = (chunk: unknown): Buffer | null => {
