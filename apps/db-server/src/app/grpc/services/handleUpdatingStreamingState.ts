@@ -1,36 +1,12 @@
+import * as grpc from '@grpc/grpc-js'
 import { updateVideoStreamingState } from '../../db/video/update/updateVideoStreamingState'
-import type { DbComServiceHandlers } from "protos/libs/gen/protobuf-types/src/video/v1/DbComService"
+import { GrpcError, unary } from './mappers'
 
-
-export const handleUpdatingStreamingState:DbComServiceHandlers['UpdateVideoStreamingState'] = async (call, callBack ) =>{
-  // The typings have the wrong format
-  // @ts-expect-error keepCase runtime field is snake_case; generated type is camelCase
-  const {video_id, has_streaming_started} = call.request
-  console.log("handleUpdatingStreamingState MSG", call.request);
-  if(video_id){
-    
-    /**
-     * Update the video table to indicate if streaming has started or stopped
-     */
-    await updateVideoStreamingState({
-      video_id,
-      has_streaming_started
-    });
-
-    try{
-      /**
-       * Respond back to the client indicating the table was updated successfully
-       */
-      
-      callBack(null, {
-        // @ts-expect-error keepCase runtime field is snake_case; generated type is camelCase
-        update_complete: true
-      });
-    }catch(e){
-      console.error(e);
-    }
-  }else{
-    // Throw error invalid message or something
-    console.error("Invalid message sent through handleUpdatingStreamingState")
-  }
-}
+// Updates only where the owner matches; otherwise NOT_FOUND.
+export const handleUpdatingStreamingState = unary(async (request) => {
+  const {video_id, has_streaming_started, owner_id} = request;
+  if (!video_id) throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'video_id is required');
+  const count = await updateVideoStreamingState({video_id, has_streaming_started: !!has_streaming_started, owner_id});
+  if (count === 0) throw new GrpcError(grpc.status.NOT_FOUND, 'video not found');
+  return {update_complete: true};
+})

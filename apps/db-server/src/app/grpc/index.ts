@@ -1,11 +1,14 @@
 import {VIDEO_PROTO_PATH} from '@globals/constants';
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from '@grpc/proto-loader'
-import { GRPC_PORT } from '@globals/constants';
+import { GRPC_PORT as DEFAULT_GRPC_PORT } from '@globals/constants';
 import type {ProtoGrpcType} from '@generated/protobuf-types';
 
 import { handleCreatingVideoService } from './services/handleCreatingVideo';
 import {handleUpdatingStreamingState} from './services/handleUpdatingStreamingState'
+import { handleCreateUser, handleGetUserById, handleGetUserByUsername, handleGetVideoForOwner, handleListVideosByOwner } from './services/usersVideos'
+
+const GRPC_PORT = Number(process.env.GRPC_PORT) || DEFAULT_GRPC_PORT;
 
 
 const launchGrpcServer = () => {
@@ -28,7 +31,12 @@ const launchGrpcServer = () => {
   // Register Services
   grpcServer.addService(VIDEO_PROTO.src.video.v1.DbComService.service, {
     CreateVideo: handleCreatingVideoService,
-    UpdateVideoStreamingState: handleUpdatingStreamingState
+    UpdateVideoStreamingState: handleUpdatingStreamingState,
+    CreateUser: handleCreateUser,
+    GetUserByUsername: handleGetUserByUsername,
+    GetUserById: handleGetUserById,
+    ListVideosByOwner: handleListVideosByOwner,
+    GetVideoForOwner: handleGetVideoForOwner
   });
 
 
