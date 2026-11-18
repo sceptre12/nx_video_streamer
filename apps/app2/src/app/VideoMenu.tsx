@@ -1,4 +1,8 @@
-const VideoMenu = ({ selectedVideo }) => {
+interface VideoMenuProps {
+  selectedVideo: string | null;
+}
+
+const VideoMenu = ({ selectedVideo }: VideoMenuProps) => {
   return <div>hello world</div>;
 };
 

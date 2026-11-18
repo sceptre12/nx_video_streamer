@@ -18,7 +18,7 @@ import type { DbComServiceHandlers } from "protos/libs/gen/protobuf-types/src/vi
 
 export const handleCreatingVideoService:DbComServiceHandlers['CreateVideo'] = async (call, callBack ) =>{
   // The typings have the wrong format
-  // @ts-ignore
+  // @ts-expect-error keepCase runtime field is snake_case; generated type is camelCase
   const {video_id, start_time} = call.request
   console.log("handleCreatingVideoService MSG", call.request);
   if(video_id && start_time){
@@ -71,7 +71,7 @@ export const handleCreatingVideoService:DbComServiceHandlers['CreateVideo'] = as
        */
       
       callBack(null, {results: {
-        // @ts-ignore
+        // @ts-expect-error keepCase runtime field is snake_case; generated type is camelCase
         video_id,
         start_time,
         is_streaming: false,// False until the socket connection has been establised

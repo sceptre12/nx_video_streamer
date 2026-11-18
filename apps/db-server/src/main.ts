@@ -55,19 +55,19 @@ server.ready().then(() =>{
    */
   server.io.on('connection', (socket)=>{
     console.info("Socket connected!", socket.id)
-    // @ts-ignore
+    // @ts-expect-error socket.io event name is not in the typed event map
     socket.on('initalizeStream', (data) =>{
       // Create a write stream based on client video path
       console.log("Creating write stream", data);
       createWriteSteamInstance(data.video_path);
     })
-    // @ts-ignore
+    // @ts-expect-error socket.io event name is not in the typed event map
     socket.on('webcamVideoChunk', (data)=>{
       console.log("Streaming video");
       streamVideoToStorage({video_chunk: data.video_chunk});
     })
 
-    // @ts-ignore
+    // @ts-expect-error socket.io event name is not in the typed event map
     socket.on('endWebcamStream', async (data, ack) =>{
       // End the stream.. additional data is provided for more clean up operations
       console.log("Ending video stream")
