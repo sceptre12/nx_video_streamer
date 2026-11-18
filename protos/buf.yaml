@@ -1,0 +1,9 @@
+version: v2
+lint:
+  use:
+    - DEFAULT
+  ignore_only:
+    RPC_REQUEST_RESPONSE_UNIQUE:
+      - src/video/v1/video.proto
+    RPC_RESPONSE_STANDARD_NAME:
+      - src/video/v1/video.proto

@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateVideoRequest, CreateVideoResponse, GetVideoRequest, GetVideoResponse, GetVideosRequest, GetVideosResponse, StartVideoStreamRequest, StartVideoStreamResponse, StopUploadStreamRequest, StopUploadStreamResponse, UpdateVideoStreamingStateRequest, UpdateVideoStreamingStateResponse } from "./video_pb.js";
+import { CreateUserRequest, CreateUserResponse, CreateVideoRequest, CreateVideoResponse, GetUserByIdRequest, GetUserByUsernameRequest, GetUserResponse, GetVideoForOwnerRequest, GetVideoRequest, GetVideoResponse, GetVideosRequest, GetVideosResponse, ListVideosByOwnerRequest, StartVideoStreamRequest, StartVideoStreamResponse, StopUploadStreamRequest, StopUploadStreamResponse, UpdateVideoStreamingStateRequest, UpdateVideoStreamingStateResponse } from "./video_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -69,6 +69,51 @@ export const DbComService = {
       name: "StartVideoStream",
       I: StartVideoStreamRequest,
       O: StartVideoStreamResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc src.video.v1.DbComService.CreateUser
+     */
+    createUser: {
+      name: "CreateUser",
+      I: CreateUserRequest,
+      O: CreateUserResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc src.video.v1.DbComService.GetUserByUsername
+     */
+    getUserByUsername: {
+      name: "GetUserByUsername",
+      I: GetUserByUsernameRequest,
+      O: GetUserResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc src.video.v1.DbComService.GetUserById
+     */
+    getUserById: {
+      name: "GetUserById",
+      I: GetUserByIdRequest,
+      O: GetUserResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc src.video.v1.DbComService.ListVideosByOwner
+     */
+    listVideosByOwner: {
+      name: "ListVideosByOwner",
+      I: ListVideosByOwnerRequest,
+      O: GetVideosResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc src.video.v1.DbComService.GetVideoForOwner
+     */
+    getVideoForOwner: {
+      name: "GetVideoForOwner",
+      I: GetVideoForOwnerRequest,
+      O: GetVideoResponse,
       kind: MethodKind.Unary,
     },
   }

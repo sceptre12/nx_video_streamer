@@ -12,6 +12,11 @@ service DbComService {
   rpc UpdateVideoStreamingState(UpdateVideoStreamingStateRequest) returns (UpdateVideoStreamingStateResponse);
   rpc StopUploadStream(StopUploadStreamRequest) returns (StopUploadStreamResponse);
   rpc StartVideoStream(StartVideoStreamRequest) returns (StartVideoStreamResponse);
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  rpc GetUserByUsername(GetUserByUsernameRequest) returns (GetUserResponse);
+  rpc GetUserById(GetUserByIdRequest) returns (GetUserResponse);
+  rpc ListVideosByOwner(ListVideosByOwnerRequest) returns (GetVideosResponse);
+  rpc GetVideoForOwner(GetVideoForOwnerRequest) returns (GetVideoResponse);
 }
 
 message VideoItem {
@@ -21,11 +26,15 @@ message VideoItem {
   bool is_streaming = 4;
   optional string thumbnail_path = 5;
   optional string video_path = 6;
+  optional string owner_id = 7;
+  optional string title = 8;
+  optional int32 duration_s = 9;
 }
 
 message UpdateVideoStreamingStateRequest{
   string video_id = 1;
   bool has_streaming_started = 2;
+  string owner_id = 3;
 }
 
 message UpdateVideoStreamingStateResponse{
@@ -54,11 +63,15 @@ message GetVideoResponse {
   bool is_streaming = 4;
   optional string thumbnail_path = 5;
   optional string video_path = 6;
+  optional string owner_id = 7;
+  optional string title = 8;
+  optional int32 duration_s = 9;
 }
 
 message CreateVideoRequest{
   string video_id = 1;
   int32 start_time = 2;
+  string owner_id = 3;
 }
 
 message CreateVideoResponse{
@@ -84,4 +97,41 @@ message StartVideoStreamRequest{
 // Not sure what should be returned atm
 message StartVideoStreamResponse{
 
+}
+
+message User {
+  string user_id = 1;
+  string username = 2;
+  string password_hash = 3;
+  int64 created_at = 4;
+}
+
+message CreateUserRequest {
+  string username = 1;
+  string password_hash = 2;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}
+
+message GetUserByUsernameRequest {
+  string username = 1;
+}
+
+message GetUserByIdRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  optional User user = 1;
+}
+
+message ListVideosByOwnerRequest {
+  string owner_id = 1;
+}
+
+message GetVideoForOwnerRequest {
+  string video_id = 1;
+  string owner_id = 2;
 }

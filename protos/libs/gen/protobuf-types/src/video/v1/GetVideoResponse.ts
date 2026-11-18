@@ -8,9 +8,15 @@ export interface GetVideoResponse {
   'isStreaming'?: (boolean);
   'thumbnailPath'?: (string);
   'videoPath'?: (string);
+  'ownerId'?: (string);
+  'title'?: (string);
+  'durationS'?: (number);
   '_endTime'?: "endTime";
   '_thumbnailPath'?: "thumbnailPath";
   '_videoPath'?: "videoPath";
+  '_ownerId'?: "ownerId";
+  '_title'?: "title";
+  '_durationS'?: "durationS";
 }
 
 export interface GetVideoResponse__Output {
@@ -20,7 +26,13 @@ export interface GetVideoResponse__Output {
   'isStreaming': (boolean);
   'thumbnailPath'?: (string);
   'videoPath'?: (string);
+  'ownerId'?: (string);
+  'title'?: (string);
+  'durationS'?: (number);
   '_endTime': "endTime";
   '_thumbnailPath': "thumbnailPath";
   '_videoPath': "videoPath";
+  '_ownerId': "ownerId";
+  '_title': "title";
+  '_durationS': "durationS";
 }
