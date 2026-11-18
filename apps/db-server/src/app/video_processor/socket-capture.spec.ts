@@ -102,6 +102,18 @@ describe('socket.io webcam capture', () => {
     socket.close();
   });
 
+  it('buffers chunks emitted before the initalizeStream ack and writes them in order', async () => {
+    const { socket } = await open(cookie(sign(aliceId)));
+    // chunks are emitted back-to-back with the init, without awaiting its ack (the app1 client does this)
+    const init = emitAck(socket, 'initalizeStream', { video_id: 'alice-2' });
+    socket.emit('webcamVideoChunk', { video_chunk: Buffer.from('head-') });
+    socket.emit('webcamVideoChunk', { video_chunk: Buffer.from('body') });
+    expect((await init).ok).toBe(true);
+    expect(await emitAck(socket, 'endWebcamStream', { video_id: 'alice-2' })).toBe(true);
+    expect(readFileSync(join(storage, 'alice-2', 'alice-2.mp4'), 'utf8')).toBe('head-body');
+    socket.close();
+  });
+
   it('a second authenticated socket cannot touch the first user\'s file', async () => {
     const a = (await open(cookie(sign(aliceId)))).socket;
     const b = (await open(cookie(sign(bobId)))).socket;

@@ -69,6 +69,11 @@ server.ready().then(() =>{
     const user_id = socket.data.user_id as string;
     let session: CaptureSession | undefined;
     let opening = false;
+    // Chunks that arrive while an open is in progress; flushed in order once the session is set, else discarded.
+    const MAX_PENDING_BYTES = 8 * 1024 * 1024;
+    let pending: Buffer[] = [];
+    let pending_bytes = 0;
+    const discardPending = () => { pending = []; pending_bytes = 0; };
     const clear = async () => {
       const s = session;
       session = undefined;
@@ -84,6 +89,7 @@ server.ready().then(() =>{
         return;
       }
       opening = true;
+      discardPending();
       const opened_ref: {current?: CaptureSession} = {};
       try {
         await clear();
@@ -98,17 +104,34 @@ server.ready().then(() =>{
           return;
         }
         session = opened;
+        for (const buf of pending) writeCaptureChunk(session, buf);
         if (typeof ack === 'function') ack({ok: true});
       } catch (e) {
         const code = (e as {code?: string}).code ?? 'internal';
         if (typeof ack === 'function') ack({ok: false, error: code});
       } finally {
         opening = false;
+        discardPending();
       }
     })
     // @ts-expect-error socket.io event name is not in the typed event map
     socket.on('webcamVideoChunk', (data: {video_chunk?: unknown})=>{
-      writeCaptureChunk(session, data?.video_chunk);
+      const chunk = data?.video_chunk;
+      if (opening) {
+        const buf = Buffer.isBuffer(chunk) ? chunk
+          : chunk instanceof ArrayBuffer ? Buffer.from(chunk)
+          : ArrayBuffer.isView(chunk) ? Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength)
+          : null;
+        if (!buf) return;
+        if (pending_bytes + buf.length > MAX_PENDING_BYTES) {
+          console.error('webcamVideoChunk dropped: pending buffer over 8 MiB while the capture session opens');
+          return;
+        }
+        pending.push(buf);
+        pending_bytes += buf.length;
+        return;
+      }
+      writeCaptureChunk(session, chunk);
     })
 
     // @ts-expect-error socket.io event name is not in the typed event map
