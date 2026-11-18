@@ -1,7 +1,7 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { randomBytes } from 'crypto';
-import { existsSync, mkdtempSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { PrismaClient } from '@prisma/client';
@@ -19,6 +19,7 @@ type Client = Record<string, (req: unknown, cb: (err: grpc.ServiceError | null, 
 let pg: ThrowawayPostgres;
 let server: DbServerChild;
 let client: Client;
+let storageParent: string;
 let storage: string;
 let prisma: PrismaClient;
 
@@ -31,7 +32,10 @@ const start = () => Math.floor(Date.now() / 1000);
 
 beforeAll(async () => {
   pg = await startPostgres('db-server-users-videos-spec');
-  storage = mkdtempSync(join(tmpdir(), 'users-videos-spec-'));
+  // private parent so storage/.. is isolated from the shared tmpdir
+  storageParent = mkdtempSync(join(tmpdir(), 'users-videos-spec-'));
+  storage = join(storageParent, 'storage');
+  mkdirSync(storage);
   server = await startDbServer({
     DATABASE_URL: pg.url,
     DIRECT_URL: pg.url,
@@ -54,7 +58,7 @@ afterAll(async () => {
   await prisma?.$disconnect();
   await server?.stop();
   pg?.stop();
-  // storage temp dir under os.tmpdir() is intentionally not removed
+  // storage parent temp dir under os.tmpdir() is intentionally not removed
 });
 
 describe('users and videos over the built db-server', () => {
@@ -103,7 +107,7 @@ describe('users and videos over the built db-server', () => {
   it('answers INVALID_ARGUMENT for a bad video_id and creates no directory', async () => {
     const r = await call('CreateVideo', { video_id: '../x', start_time: start(), owner_id: alice.user_id });
     expect(r.err?.code).toBe(grpc.status.INVALID_ARGUMENT);
-    expect(existsSync(join(storage, '..', 'x'))).toBe(false);
+    expect(existsSync(join(storageParent, 'x'))).toBe(false);
     expect(existsSync(join(storage, 'x'))).toBe(false);
   });
 
