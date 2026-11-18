@@ -72,7 +72,7 @@ Test environment: Throwaway Postgres (test-plan.md A2 integration-env): the spec
 - [ ] CreateVideo with a `../x` video_id answers INVALID_ARGUMENT and creates no directory (users-videos.spec.ts).
 - [ ] A duplicate video_id answers ALREADY_EXISTS and the server keeps serving (users-videos.spec.ts).
 - [ ] CreateUser answers ALREADY_EXISTS for a duplicate username; GetUserByUsername and GetUserById return the row or an empty user (users-videos.spec.ts).
-- [ ] The five new rpcs are registered in grpc/index.ts and Prisma errors are rethrown or mapped, not swallowed.
+- [ ] The five new rpcs are registered in grpc/index.ts and Prisma errors are rethrown or mapped, not swallowed. This criterion is checked by the reviewer reading the diff, not by the done command.
 
 ## 9. Verification Commands
 ```bash

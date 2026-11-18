@@ -48,7 +48,7 @@ Test environment: none (no code).
 
 ## 8. Acceptance Criteria
 - [ ] The decision file exists, is non-empty and has a line starting `DECISION:`.
-- [ ] It answers the question of the spike draft and lists every claim it could not confirm by reading under a heading `Unverified`.
+- [ ] It answers the question of the spike draft and lists every claim it could not confirm by reading under a heading `Unverified`. This criterion is checked by the reviewer reading the diff, not by the done command.
 - [ ] No file inside the worktree changed.
 
 ## 9. Verification Commands

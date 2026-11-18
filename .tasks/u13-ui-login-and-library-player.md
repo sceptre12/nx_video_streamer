@@ -56,7 +56,7 @@ Test environment: jest unit specs with a stubbed global `fetch` (component tests
 ## 8. Acceptance Criteria
 - [ ] No `http://localhost` string remains in apps/app1/src/app/api or apps/app1/src/app/hooks.
 - [ ] The API client sends `credentials: 'include'` and uses relative URLs (api/index.spec.ts, created by u13).
-- [ ] proxy.conf.json targets 3002 for /api and 3001 for /socket.io.
+- [ ] proxy.conf.json targets 3002 for /api and 3001 for /socket.io. This criterion is checked by the reviewer reading the diff, not by the done command.
 
 ## 9. Verification Commands
 ```bash

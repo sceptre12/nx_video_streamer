@@ -56,11 +56,11 @@ Test environment: compose project `nvs-run-1-20261117-st9`; the lead runs `docke
 
 ## 8. Acceptance Criteria
 - [ ] `docker compose config` is valid and services match the pin.
-- [ ] scripts/stack-env.sh creates a git-ignored `.env` with random secrets (JWT_SECRET at least 32 random bytes, encoded so its length is at least 32 characters; both servers refuse to start under 32 bytes) and prints `kept` on a second run; neither script enables `set -x` and neither echoes any `.env` value (output may name the keys only).
+- [ ] scripts/stack-env.sh creates a git-ignored `.env` with random secrets (JWT_SECRET at least 32 random bytes, encoded so its length is at least 32 characters; both servers refuse to start under 32 bytes) and prints `kept` on a second run; neither script enables `set -x` and neither echoes any `.env` value (output may name the keys only). This criterion is checked by the reviewer reading the diff, not by the done command.
 - [ ] stack-smoke.sh reports every long-running service healthy, `seed` exited 0, login 200, library 200, stream 206 within 180 s and prints `STACK-SMOKE-OK` last.
 - [ ] Only `ui` publishes a host port.
-- [ ] docker-compose.yml builds `ui`, `app-server` and `db-server` with `build:` on the merged Dockerfiles and carries no `image: nvs-run-1-20261117-` unit-tag reference (a clean checkout can run it).
-- [ ] stack-smoke.sh runs `bash scripts/stack-env.sh` first, before any compose command, so a clean checkout without `.env` works (the pm run, c45, relies on this).
+- [ ] docker-compose.yml builds `ui`, `app-server` and `db-server` with `build:` on the merged Dockerfiles and carries no `image: nvs-run-1-20261117-` unit-tag reference (a clean checkout can run it). This criterion is checked by the reviewer reading the diff, not by the done command.
+- [ ] stack-smoke.sh runs `bash scripts/stack-env.sh` first, before any compose command, so a clean checkout without `.env` works (the pm run, c45, relies on this). This criterion is checked by the reviewer reading the diff, not by the done command.
 - [ ] stack-smoke.sh starts with `set -euo pipefail`, prints `STACK-SMOKE-OK` as its last stdout line only on success and exits non-zero otherwise (the done command relies on the exit status; a plain command, no output capture).
 - [ ] stack-smoke.sh itself fails (non-zero before printing the token) unless docker-compose.yml has exactly one published port mapping (the `ui` one): it counts `grep -c -E '^\s+- "?[$0-9]' docker-compose.yml` and compares with 1.
 

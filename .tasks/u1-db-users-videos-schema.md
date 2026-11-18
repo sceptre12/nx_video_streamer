@@ -62,7 +62,7 @@ Test environment: Throwaway Postgres (test-plan.md A2 integration-env): the spec
 | secrets in specs | generated at spec start with crypto.randomBytes, passed in memory | any literal JWT_SECRET, password or `.env` content in a diff | test-plan.md A2 spec-secrets; architecture.md item 10 |
 
 ## 8. Acceptance Criteria
-- [ ] `schema.prisma` has `model User` and the three new Video columns exactly per the db-schema pin.
+- [ ] `schema.prisma` has `model User` and the three new Video columns exactly per the db-schema pin. This criterion is checked by the reviewer reading the diff, not by the done command.
 - [ ] A new additive migration directory exists and the two existing directories are unchanged.
 - [ ] `npx prisma generate --schema apps/db-server/prisma/schema.prisma` exits 0.
 - [ ] migration.spec.ts passes: copy the two existing migration directories to a temp dir, `prisma migrate deploy` against a throwaway postgres, insert legacy Video rows with `psql` in that container, then `prisma migrate deploy` with the full directory and assert the rows survive with `owner_id` NULL.
