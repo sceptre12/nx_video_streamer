@@ -49,6 +49,7 @@ Test environment: Throwaway Postgres (test-plan.md A2 integration-env): the spec
 |---|---|---|---|
 | client address | env `DB_GRPC_ADDR`, default `localhost:50051` | the hard-coded `localhost:${GRPC_PORT}` | contracts/runtime-env-ports.md@d0d726000f0884e938bb5e0292434657f4198abd |
 | `longs` option | `String` kept; confirm in grpc/index.ts | changing it | contracts/grpc-db.md@2ded721b5b33b467e3531a38b115d85ccf3a5863 |
+| field casing (Casing rule) | runtime request and response objects of the app-server client are snake_case (`owner_id`, `user_id`, `password_hash`, `created_at`, `duration_s`) because the loader sets `keepCase: true`; the generated TypeScript under `protos/libs/gen/protobuf-types/**` is camelCase (`ownerId`, `userId`, `passwordHash`, `createdAt`, `durationS`); each wrapper maps between the two explicitly in one place and keeps its snake_case public shape (as `createVideo.ts:22` `requestObject: {video_id, start_time}` is today, default); a spec case whose name starts with `casing:` asserts the mapping through the built db-server, so the types and the runtime cannot disagree without a failing test | passing a camelCase object to the client (keepCase drops the fields without an error), returning camelCase keys to callers, or hiding the mismatch with `@ts-ignore` (banned by lint after st11) | measured: apps/app-server/src/app/grpc/index.ts:12 `keepCase: true`; protos/libs/gen/protobuf-types/src/video/v1/VideoItem.ts:5 `'videoId'`; plan P0b F14 |
 | helper location | spec helpers live in `apps/app-server/src/app/grpc/test-support/**` (created by u5); later app-server specs import them and never edit them | duplicating the postgres and db-server starters per spec | plan P5 (u5 owns grpc/**) |
 | Prisma client | run `npx prisma generate --schema apps/db-server/prisma/schema.prisma` in this worktree before any build or test | assuming `@prisma/client` is generated (`npm ci --ignore-scripts` skips it and only u1 generated it in its own worktree) | review-architecture.md H1; repo-profile.md commands.install |
 | db-server build | run `npx nx build db-server` before a spec that spawns db-server; spawn `dist/apps/db-server/main.js` from the repo root | spawning an unbuilt db-server; spawning from another cwd | review-architecture.md H2; test-plan.md A2 |
@@ -59,19 +60,20 @@ Test environment: Throwaway Postgres (test-plan.md A2 integration-env): the spec
 ## 8. Acceptance Criteria
 - [ ] Each of the five new wrappers calls the built db-server and returns the db-server result (users-videos-client.spec.ts).
 - [ ] The existing createVideo and updateVideoStreamingState wrappers accept and send `owner_id` (a case in users-videos-client.spec.ts, inside the done command).
+- [ ] Casing mapping: a case in users-videos-client.spec.ts whose name starts with `casing:` calls CreateUser then GetUserById, and CreateVideo, through the wrappers against the built db-server and asserts the returned objects carry the snake_case keys with the sent values (`user_id` non-empty, `password_hash` equal to the hash sent, `created_at` a string, `owner_id` equal to the creating user) and no camelCase key (`userId`, `passwordHash`, `createdAt`, `ownerId` undefined) (inside the done command: `grep -q casing:` on the spec plus the jest run).
 - [ ] The client address comes from DB_GRPC_ADDR (verifier-read side command in section 9, outside the done token).
 - [ ] `apps/app-server/src/app/grpc/test-support/**` exports starters for the throwaway postgres and the built db-server child; the db-server starter picks free ports by binding port 0 and retries the spawn on EADDRINUSE (verifier-read side command in section 9, outside the done token).
 
 ## 9. Verification Commands
 ```bash
 # all criteria
-source ~/.nvm/nvm.sh && nvm use 20.14.0 && npx prisma generate --schema apps/db-server/prisma/schema.prisma && npx nx build db-server && npx jest -c apps/app-server/jest.config.ts --runInBand apps/app-server/src/app/grpc/services/users-videos-client.spec.ts && echo U5-OK
-# criteria 3 and 4 (expect 1 or more each)
+source ~/.nvm/nvm.sh && nvm use 20.14.0 && grep -q casing: apps/app-server/src/app/grpc/services/users-videos-client.spec.ts && npx prisma generate --schema apps/db-server/prisma/schema.prisma && npx nx build db-server && npx jest -c apps/app-server/jest.config.ts --runInBand apps/app-server/src/app/grpc/services/users-videos-client.spec.ts && echo U5-OK
+# criteria 4 and 5 (expect 1 or more each)
 grep -c DB_GRPC_ADDR apps/app-server/src/app/grpc/index.ts
-# criterion 4
+# criterion 5
 ls apps/app-server/src/app/grpc/test-support
 ```
-Done token: `U5-OK`; verifier: `source ~/.nvm/nvm.sh && nvm use 20.14.0 && npx prisma generate --schema apps/db-server/prisma/schema.prisma && npx nx build db-server && npx jest -c apps/app-server/jest.config.ts --runInBand apps/app-server/src/app/grpc/services/users-videos-client.spec.ts && echo U5-OK` (exit 0, last stdout line equals the token).
+Done token: `U5-OK`; verifier: `source ~/.nvm/nvm.sh && nvm use 20.14.0 && grep -q casing: apps/app-server/src/app/grpc/services/users-videos-client.spec.ts && npx prisma generate --schema apps/db-server/prisma/schema.prisma && npx nx build db-server && npx jest -c apps/app-server/jest.config.ts --runInBand apps/app-server/src/app/grpc/services/users-videos-client.spec.ts && echo U5-OK` (exit 0, last stdout line equals the token).
 
 ## 10. Branch and Worktree
 `GH-7-account-auth-u5` from `origin/main` (the sub-task branch `GH-7-account-auth` once it holds the Wave 0 commit) in the unit worktree `/Users/xavier/delivery/worktrees/run-1-20261117-st3-u5`; never the main checkout. The branch exists only after the desk read back the key GH-7 (3.0). Unit branch rule of this plan: `<sub-task branch>-<unit>`.

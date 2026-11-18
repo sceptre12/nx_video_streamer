@@ -47,24 +47,24 @@ Existing service `DbComService` in protos/src/video/v1/video.proto. Nx project `
 | field numbers | appended only: VideoItem 7,8,9; CreateVideoRequest.owner_id=3; UpdateVideoStreamingStateRequest.owner_id=3; existing numbers untouched | renumbering or reusing a number | contracts/grpc-db.md@2ded721b5b33b467e3531a38b115d85ccf3a5863 |
 | `longs` loader option | `String` (protos/project.json build_types `--longs=String`); int64 crosses as a string | changing the option | contracts/grpc-db.md@2ded721b5b33b467e3531a38b115d85ccf3a5863 |
 | sensitive path | `protos/libs/gen/**` is in sensitive_paths and explicitly in scope for st1 (plan P13 grant.st1.2) | committing any other sensitive path | plans/repo-profile.md sensitive_paths; architecture.md item 5 |
-| regeneration owner | only u2 regenerates `protos/libs/gen/**` | any other unit running the generator | architecture.md item 7 |
+| regeneration owner | only u2 regenerates `protos/libs/gen/**` in st1 (u28 of st11 committed main's regenerated stubs before st1, from the unchanged proto; plan P0b F15) | any other unit running the generator | architecture.md item 7; plan P5 |
 | node prefix | `source ~/.nvm/nvm.sh && nvm use 20.14.0` in every shell call | system node v22.13.0 (node 20.14.0 is installed by the desk before dispatch) | repo-profile.md node.prefix_cmd |
 
 ## 8. Acceptance Criteria
 - [ ] video.proto contains every message and rpc name of the grpc-db pin (names present; the section 7 field numbers are read by the verifier from the diff, no command checks them).
-- [ ] `npx nx run protos:build` exits 0 and the regenerated files include `CreateUser` in DbComService.ts and `owner_id` in VideoItem.ts.
+- [ ] `npx nx run protos:build` exits 0 and the regenerated files include `CreateUser` in DbComService.ts and `ownerId` in VideoItem.ts (proto-loader-gen-types emits camelCase under protos/libs/gen/protobuf-types/**; `owner_id` stays in video.proto and as the proto field name in protos/libs/gen/src/video/v1/video_pb.ts).
 - [ ] No file outside `protos/src/video/v1/video.proto` and `protos/libs/gen/**` changed.
 
 ## 9. Verification Commands
 ```bash
 # criteria 1-2
-source ~/.nvm/nvm.sh && nvm use 20.14.0 && npx nx run protos:build && grep -q CreateUser protos/libs/gen/protobuf-types/src/video/v1/DbComService.ts && grep -q owner_id protos/libs/gen/protobuf-types/src/video/v1/VideoItem.ts && echo U2-OK
+source ~/.nvm/nvm.sh && nvm use 20.14.0 && npx nx run protos:build && grep -q CreateUser protos/libs/gen/protobuf-types/src/video/v1/DbComService.ts && grep -q ownerId protos/libs/gen/protobuf-types/src/video/v1/VideoItem.ts && echo U2-OK
 # criterion 1 (rpcs and fields in the proto)
 grep -c -E 'rpc (CreateUser|GetUserByUsername|GetUserById|ListVideosByOwner|GetVideoForOwner)|owner_id' protos/src/video/v1/video.proto
 # criterion 3 (expect 0)
 git diff --name-only origin/main | grep -v -E '^(protos/src/video/v1/video.proto|protos/libs/gen/)' | wc -l
 ```
-Done token: `U2-OK`; verifier: `source ~/.nvm/nvm.sh && nvm use 20.14.0 && npx nx run protos:build && grep -q CreateUser protos/libs/gen/protobuf-types/src/video/v1/DbComService.ts && grep -q owner_id protos/libs/gen/protobuf-types/src/video/v1/VideoItem.ts && echo U2-OK` (exit 0, last stdout line equals the token).
+Done token: `U2-OK`; verifier: `source ~/.nvm/nvm.sh && nvm use 20.14.0 && npx nx run protos:build && grep -q CreateUser protos/libs/gen/protobuf-types/src/video/v1/DbComService.ts && grep -q ownerId protos/libs/gen/protobuf-types/src/video/v1/VideoItem.ts && echo U2-OK` (exit 0, last stdout line equals the token).
 
 ## 10. Branch and Worktree
 `GH-5-db-users-videos-schema-u2` from `origin/main` (the sub-task branch `GH-5-db-users-videos-schema` once it holds the Wave 0 commit) in the unit worktree `/Users/xavier/delivery/worktrees/run-1-20261117-st1-u2`; never the main checkout. The branch exists only after the desk read back the key GH-5 (3.0). Unit branch rule of this plan: `<sub-task branch>-<unit>`.
