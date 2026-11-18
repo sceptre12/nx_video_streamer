@@ -3,8 +3,10 @@
  *
  * The loader runs with `keepCase: true`, so request and response objects at runtime are snake_case.
  * The generated types under protos/libs/gen/protobuf-types are camelCase. Wrappers keep a snake_case
- * public shape; the only cast to the generated types is `toWire`, and the only reads of runtime
- * response objects are the `from*` functions below. The `casing:` cases in
+ * public shape; the only cast to the generated types is `toWire`. The casing mapping (`toWire` and the
+ * `from*` mappers below) lives here; services/createVideo.ts (`results`), services/updateVideoStreamingState.ts
+ * (`update_complete`) and services/users.ts (`user`) also make thin pass-through reads of one top-level
+ * response field before handing it on. The `casing:` cases in
  * services/users-videos-client.spec.ts assert this against the built db-server.
  */
 

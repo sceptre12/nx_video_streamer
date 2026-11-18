@@ -16,7 +16,7 @@ const resolveProtoPath = (p: string): string => {
   }
 };
 
-// Contract runtime-env-ports: DB_GRPC_ADDR, default localhost:50051 (db-server:50051 in containers).
+// Contract runtime-env-ports names DB_GRPC_ADDR (db-server:50051 in containers); the localhost:50051 default is this unit's (u5) local-run default.
 const DB_GRPC_ADDR = process.env.DB_GRPC_ADDR || `localhost:${GRPC_PORT}`;
 
 const createGrpcClient = () => {
