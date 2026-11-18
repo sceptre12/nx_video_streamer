@@ -46,18 +46,19 @@ export const fromUser = (raw: unknown): UserRecord | null => {
   };
 };
 
+/** Absent optional fields (db-server omits nulls; proto3 optional stays unset) become null, matching VideoRecord. */
 export const fromVideo = (raw: unknown): VideoRecord => {
   const r = (raw ?? {}) as Raw;
   return {
     video_id: r['video_id'] as string,
     start_time: r['start_time'] as number,
-    end_time: r['end_time'] as number | null | undefined,
+    end_time: (r['end_time'] ?? null) as number | null,
     is_streaming: r['is_streaming'] as boolean,
-    thumbnail_path: r['thumbnail_path'] as string | null | undefined,
-    video_path: r['video_path'] as string | null | undefined,
-    owner_id: r['owner_id'] as string | null | undefined,
-    title: r['title'] as string | null | undefined,
-    duration_s: r['duration_s'] as number | null | undefined,
+    thumbnail_path: (r['thumbnail_path'] ?? null) as string | null,
+    video_path: (r['video_path'] ?? null) as string | null,
+    owner_id: (r['owner_id'] ?? null) as string | null,
+    title: (r['title'] ?? null) as string | null,
+    duration_s: (r['duration_s'] ?? null) as number | null,
   };
 };
 

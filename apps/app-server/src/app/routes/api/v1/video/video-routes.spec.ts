@@ -84,6 +84,12 @@ describe('video routes', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().video_id).toBe(video_id);
     expect(res.json().owner_id).toBe(u.user_id);
+    expect(res.json().start_time).toBe(1000);
+    expect(res.json().is_streaming).toBe(false);
+    const body = res.json();
+    for (const k of ['end_time', 'title', 'duration_s']) {
+      expect(body).toHaveProperty(k, null);
+    }
     expect((await getRow(video_id, u.user_id))?.owner_id).toBe(u.user_id);
   });
 
