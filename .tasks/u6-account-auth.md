@@ -71,6 +71,7 @@ Test environment: Throwaway Postgres (test-plan.md A2 integration-env): the spec
 ## 8. Acceptance Criteria
 - [ ] register answers 201 with no password and no cookie; invalid input 400 `invalid_input`; duplicate 409 `username_taken` (auth.spec.ts).
 - [ ] login sets the signed httpOnly cookie; a wrong password answers 401 and sets no cookie (auth.spec.ts).
+- [ ] When db-server answers GetUserByUsername with the `user` field unset (null), login answers 401 `invalid_credentials`, runs the dummy bcrypt compare and sets no cookie (auth.spec.ts).
 - [ ] logout answers 204 with the cookie cleared; me answers 200 with user id and username (auth.spec.ts).
 - [ ] The `GET /api/v1/auth/me` response carries `Cache-Control: private, no-store` (auth.spec.ts; contracts/api-http.md:23).
 - [ ] Set-Cookie flags are HttpOnly, SameSite=Lax, Path=/ and Secure only when COOKIE_SECURE is true; the stored hash is not the plaintext (auth.spec.ts).

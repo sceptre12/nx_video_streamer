@@ -49,6 +49,7 @@ Test environment: docker build and `docker run --rm ... nginx -t`; no ports are 
 | `/socket.io` location | sets `Upgrade` and `Connection` headers and strips client-sent identity headers | a plain proxy_pass | containerised-stack draft requirement 8 |
 | stream proxy | request buffering off and Range headers passed | buffering the video | spike-ui-static-serving-and-proxy draft requirement 1 |
 | `nginx -t` standalone | passes in a container started alone (see the u16 decision on upstream resolution) | static upstream names that fail resolution | plan P0b F7 |
+| app1 production build | the build of app1 (`npx nx build app1` to `dist/apps/app1`) is Unverified until this unit runs it; if it fails on the `fileReplacements` of `apps/app1/src/environments/environment.ts` (project.json), write `.decisions/u18.md` and stop, naming `apps/app1/project.json` as the out-of-scope fix (no unit owns it) | editing project.json or creating `apps/app1/src/environments` from this unit | apps/app1/project.json |
 
 ## 8. Acceptance Criteria
 - [ ] `docker build -f apps/app1/Dockerfile .` exits 0.
@@ -76,3 +77,4 @@ On any of these, write `.decisions/u18.md` (template: `skills/delivery-run/refer
 3. an unclear scope boundary
 4. criteria that cannot be verified with the commands given
 5. anything that needs a file outside section 3
+6. the app1 production build fails (for example on the `fileReplacements` in `apps/app1/project.json`): write `.decisions/u18.md` and stop; the fix is in `apps/app1/project.json`, which is outside section 3

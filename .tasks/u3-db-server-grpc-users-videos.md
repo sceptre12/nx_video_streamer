@@ -58,6 +58,8 @@ Test environment: Throwaway Postgres (test-plan.md A2 integration-env): the spec
 | duplicate video_id | CreateVideo answers gRPC ALREADY_EXISTS, the server stays alive and a later CreateVideo succeeds (replaces the `CLASSH OCCURRED` throw, handleCreatingVideo.ts clash check) | an uncaught throw inside the async handler that kills db-server | review-architecture.md H3; contract gap flagged in plan P0b F4 (grpc-db pin names ALREADY_EXISTS for CreateUser only) |
 | stored path | relative to VIDEO_STORAGE_DIR (default `/data/videos`) | absolute path from `STORAGE_PATH` or `git rev-parse` | contracts/db-schema.md@d01c05399cac0a87b6b7d00ddb294f1674ced019 |
 | legacy rows | `ListVideosByOwner` and `GetVideoForOwner` exclude `owner_id` NULL rows | returning ownerless rows | contracts/grpc-db.md@2ded721b5b33b467e3531a38b115d85ccf3a5863 |
+| BigInt mapping | Prisma returns `BigInt` for `Video.start_time`, `Video.end_time` and `User.created_at`; the handlers map them explicitly before replying: `Number(x)` for the int32 proto fields (`start_time`, `end_time`), `String(x)` for the int64 `created_at` (the loader uses `longs: String`); a spec asserts a real round-trip through the built server, not a mocked row | passing a raw `BigInt` to grpc-js (int32 throws or loses the value, int64 is not serialised) | contracts/grpc-db.md (User and VideoItem messages) |
+| GetUserByUsername / GetUserById not found | not found = the `user` field is unset (null on the app-server side), never an empty-but-present `User`; found = the full row | replying with an empty `User` (empty `user_id` and `password_hash`), which the login consumer (u6) would treat as found | contracts/grpc-db.md (GetUserResponse, optional User user) |
 | `STORAGE_PATH` export | keep exporting `STORAGE_PATH` as the resolved VIDEO_STORAGE_DIR (no execSync) so `video_processor/**` (u4) still compiles until u4 switches its import | removing the export in this unit (u4's files would stop building) | plan P5 (u3 owns utils/**, u4 owns video_processor/**) |
 | GRPC_PORT | read env `GRPC_PORT`, default 50051 | the hard-coded constant | contracts/runtime-env-ports.md@d0d726000f0884e938bb5e0292434657f4198abd |
 | Prisma client | run `npx prisma generate --schema apps/db-server/prisma/schema.prisma` in this worktree before any build or test | assuming `@prisma/client` is generated (`npm ci --ignore-scripts` skips it and only u1 generated it in its own worktree) | review-architecture.md H1; repo-profile.md commands.install |
@@ -71,7 +73,7 @@ Test environment: Throwaway Postgres (test-plan.md A2 integration-env): the spec
 - [ ] An update by a non-owner answers NOT_FOUND and the stored video_path is relative (users-videos.spec.ts).
 - [ ] CreateVideo with a `../x` video_id answers INVALID_ARGUMENT and creates no directory (users-videos.spec.ts).
 - [ ] A duplicate video_id answers ALREADY_EXISTS and the server keeps serving (users-videos.spec.ts).
-- [ ] CreateUser answers ALREADY_EXISTS for a duplicate username; GetUserByUsername and GetUserById return the row or an empty user (users-videos.spec.ts).
+- [ ] CreateUser answers ALREADY_EXISTS for a duplicate username; GetUserByUsername and GetUserById return the row when found; not found = the user field is unset (null on the app-server side), never an empty-but-present user (users-videos.spec.ts).
 - [ ] The five new rpcs are registered in grpc/index.ts and Prisma errors are rethrown or mapped, not swallowed. This criterion is checked by the reviewer reading the diff, not by the done command.
 
 ## 9. Verification Commands

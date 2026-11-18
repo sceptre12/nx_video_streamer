@@ -11,7 +11,7 @@ Add `model User` and `Video.owner_id/title/duration_s` to schema.prisma, one new
 - Relevant contracts: `contracts/db-schema.md@d01c05399cac0a87b6b7d00ddb294f1674ced019`, `contracts/runtime-env-ports.md@d0d726000f0884e938bb5e0292434657f4198abd`
 - Relevant architecture: `/Users/xavier/projects/agent-hq-workspace/plans/nx_video_streamer/run-1-20261117/architecture.md` section 5 (sub-task row st1) and section 7
 - Dependencies: Blocked by: none (independent). Done input: the INSTALLED ledger row for `bcryptjs` (st1 owns that package; the lead requests it in Wave 0, plan P5), visible as `"bcryptjs"` in package.json.
-- Desk steps (not done by this unit): INSTALL `bcryptjs` (owner u1) in the st1 worktree before dispatch (plan P0a step 4).
+- Desk steps (not done by this unit): INSTALL `bcryptjs` (owner u1) in the st1 worktree before dispatch (plan P0a step 4); `npx prisma generate --schema apps/db-server/prisma/schema.prisma` runs after the desk `npm ci --ignore-scripts` (the Prisma engines download is a desk-side network step, and `--ignore-scripts` skips the postinstall generate). The done command only asserts that the generated client exists.
 
 ## 3. Scope
 **In scope:**

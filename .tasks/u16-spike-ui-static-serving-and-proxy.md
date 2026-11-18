@@ -45,6 +45,7 @@ Test environment: none (no code).
 | nginx -t outside compose | state how upstream hostnames `app-server` and `db-server` are written so `nginx -t` still passes in a container started alone (u18's done command runs `nginx -t`) | static `proxy_pass http://app-server:3002` that fails host resolution at config test | plan P0b F7 |
 | no docker, no npx | reads only | running docker or npx | review-architecture.md H6; plan P0b F2 |
 | default recipe on overrun | nginx serving the built app1 with `try_files` fallback and `proxy_pass` for `/api` and `/socket.io` (upgrade headers) with request buffering off | an unmeasured recipe | spike-ui-static-serving-and-proxy draft Notes |
+| app1 production build | record under the `Unverified` heading that `npx nx build app1` (production configuration, `fileReplacements` of `apps/app1/src/environments/environment.ts`) is not confirmed by reading: only the project.json `outputPath` was read and no `apps/app1/src/environments` directory exists at base; u18 confirms it | stating the build as working | apps/app1/project.json |
 
 ## 8. Acceptance Criteria
 - [ ] The decision file exists, is non-empty and has a line starting `DECISION:`.
