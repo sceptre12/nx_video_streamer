@@ -15,6 +15,9 @@ export const handleCreatingVideoService = unary(async (request) => {
   if (typeof video_id !== 'string' || !VIDEO_ID_PATTERN.test(video_id)) {
     throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'video_id must match ^[A-Za-z0-9_-]{1,64}$');
   }
+  if (typeof owner_id !== 'string' || owner_id.length === 0) {
+    throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'owner_id is required');
+  }
   const start = Number(start_time);
   if (!Number.isFinite(start) || start <= 0) {
     throw new GrpcError(grpc.status.INVALID_ARGUMENT, 'start_time is required');

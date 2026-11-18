@@ -111,6 +111,12 @@ describe('users and videos over the built db-server', () => {
     expect(existsSync(join(storage, 'x'))).toBe(false);
   });
 
+  it('answers INVALID_ARGUMENT for an empty owner_id and creates no directory', async () => {
+    const r = await call('CreateVideo', { video_id: 'vid_noowner', start_time: start(), owner_id: '' });
+    expect(r.err?.code).toBe(grpc.status.INVALID_ARGUMENT);
+    expect(existsSync(join(storage, 'vid_noowner'))).toBe(false);
+  });
+
   it('answers ALREADY_EXISTS for a duplicate video_id and keeps serving', async () => {
     const dup = await call('CreateVideo', { video_id: 'vid_a-1', start_time: start(), owner_id: alice.user_id });
     expect(dup.err?.code).toBe(grpc.status.ALREADY_EXISTS);
