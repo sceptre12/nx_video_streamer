@@ -56,14 +56,14 @@ Test environment: `--list` does not run globalSetup, so no stack is started by t
 | report and trace dirs | `apps/stack-e2e/.gitignore` ignores `test-results/`, `playwright-report/`, `blob-report/` and `playwright/.cache/`; config sets `trace: 'off'` | tracked report or trace output (Blocking if tracing is on) | review-architecture.md H4; measured: root .gitignore has no playwright entry |
 | stack lifecycle | globalSetup runs `bash scripts/stack-env.sh` then `docker compose -p nvs-run-1-20261117-st10 up -d`, then polls (as u19's stack-smoke.sh does) until every long-running service is healthy and the one-shot `seed` service has exited 0, with a timeout, rather than relying on `--wait` for an exited one-shot container; globalTeardown runs `docker compose -p nvs-run-1-20261117-st10 down -v` (own project name only) | assuming a running stack (st9 ends with down -v) | review-architecture.md H5 |
 | compose project name | `nvs-run-1-20261117-st10` | the default project name (port collisions between stacks) | architecture.md item 7 (project name includes run id) |
-| workers | `workers: 1` in playwright.config.ts (the specs share one stack and one Redis) | the default parallel workers (isolation.spec.ts warms `lib:v1:{demo1}` for 60 s while cache.spec.ts expects a first MISS; one worker removes the parallel overlap only, the file order on that worker is not pinned here) | contracts/cache-keys.md |
+| workers | `workers: 1` in playwright.config.ts (the specs share one stack and one Redis) | the default parallel workers (isolation.spec.ts warms `lib:v1:{demo1}` while cache.spec.ts runs; one worker serialises the specs and removes that parallel overlap; the first-MISS correctness of cache.spec.ts comes from the fresh users u23 registers, not from spec file order) | contracts/cache-keys.md |
 | one stack at a time | st10 never runs while st9 holds `lane/stack` | parallel stacks | architecture.md item 7 |
 | node prefix | `source ~/.nvm/nvm.sh && nvm use 20.14.0` in every shell call | system node v22.13.0 (node 20.14.0 is installed by the desk before dispatch) | repo-profile.md node.prefix_cmd |
 
 ## 8. Acceptance Criteria
 - [ ] `apps/stack-e2e/.gitignore` ignores the three report and result directories (checked with `git check-ignore`).
 - [ ] playwright.config.ts has `trace: 'off'`, a globalSetup and a globalTeardown.
-- [ ] playwright.config.ts pins `workers: 1` (spec files run serially on the one shared stack, so they do not overlap; this file does not pin the order of the spec files, and a cache.spec.ts first-MISS after isolation.spec.ts depends on that order and on the 60 s TTL of contracts/cache-keys.md). This criterion is checked by the reviewer reading the diff, not by the done command.
+- [ ] playwright.config.ts pins `workers: 1` (spec files run serially on the one shared stack, so they do not overlap; the first-MISS correctness of cache.spec.ts comes from the fresh users u23 registers, not from spec file order). This criterion is checked by the reviewer reading the diff, not by the done command.
 - [ ] `npx playwright test -c apps/stack-e2e/playwright.config.ts --list` exits 0.
 - [ ] `"@playwright/test"` is present in package.json.
 
