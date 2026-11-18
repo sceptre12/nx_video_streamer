@@ -13,6 +13,7 @@ jest.setTimeout(240000);
 const SECRET = randomBytes(32).toString('hex');
 const rand = (p: string) => `${p}_${randomBytes(4).toString('hex')}`;
 const pw = () => randomBytes(12).toString('hex');
+const VALID_PW = pw();
 const savedEnv = { s: process.env.JWT_SECRET, a: process.env.DB_GRPC_ADDR, c: process.env.COOKIE_SECURE };
 
 let pg: ThrowawayPostgres;
@@ -80,11 +81,11 @@ describe('register', () => {
   it.each([
     ['short password', { username: 'valid_name', password: 'short' }],
     ['long password', { username: 'valid_name', password: 'x'.repeat(129) }],
-    ['uppercase username', { username: 'Bad_Name', password: 'longenoughpw' }],
-    ['short username', { username: 'ab', password: 'longenoughpw' }],
+    ['uppercase username', { username: 'Bad_Name', password: VALID_PW }],
+    ['short username', { username: 'ab', password: VALID_PW }],
     ['missing password', { username: 'valid_name' }],
     ['non-string password', { username: 'valid_name', password: 12345678 }],
-    ['array password', { username: 'valid_name', password: ['longenoughpw'] }],
+    ['array password', { username: 'valid_name', password: [VALID_PW] }],
   ])('answers 400 invalid_input for %s', async (_n, body) => {
     const res = await post('/api/v1/auth/register', body);
     expect(res.statusCode).toBe(400);
