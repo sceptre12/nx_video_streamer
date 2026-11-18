@@ -54,6 +54,8 @@ beforeAll(async () => {
   await prisma.video.create({ data: { ...base, video_id: 'legacy-1' } });
   server = await startDbServer({
     DATABASE_URL: pg.url, DIRECT_URL: pg.url, JWT_SECRET: secret, VIDEO_STORAGE_DIR: storage,
+    // the spec connects to 127.0.0.1; main.ts defaults HOST to localhost (::1 first), so pin it here
+    HOST: '127.0.0.1',
   });
 });
 
