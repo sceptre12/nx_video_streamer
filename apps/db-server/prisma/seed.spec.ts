@@ -86,14 +86,27 @@ describe('demo seed', () => {
     ]);
     const port = docker(['port', container, '5432/tcp']).split('\n')[0].split(':').pop();
     url = `postgresql://postgres:${dbPassword}@127.0.0.1:${port}/postgres`;
-    for (let i = 0; i < 60; i++) {
+    let ready = false;
+    let lastError: unknown;
+    for (let i = 0; i < 60 && !ready; i++) {
       try {
-        docker(['exec', container, 'pg_isready', '-U', 'postgres']);
-        psql('select 1');
-        break;
-      } catch {
+        docker(['exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres']);
+        docker([
+          'exec', container, 'psql', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'postgres',
+          '-At', '-v', 'ON_ERROR_STOP=1', '-c', 'select 1',
+        ]);
+        ready = true;
+      } catch (e) {
+        lastError = e;
         await new Promise((r) => setTimeout(r, 1000));
       }
+    }
+    if (!ready) {
+      throw new Error(
+        `postgres in container ${container} not ready over TCP after 60 tries: ${
+          lastError instanceof Error ? lastError.message : String(lastError)
+        }`,
+      );
     }
     execFileSync('npx', ['prisma', 'migrate', 'deploy', '--schema', join(PRISMA_DIR, 'schema.prisma')], {
       cwd: REPO_ROOT,
