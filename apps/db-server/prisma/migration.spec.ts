@@ -10,25 +10,59 @@ import {
 import { tmpdir } from 'os';
 import { join, resolve } from 'path';
 
+/*
+ * Needs a reachable Docker daemon and pulls postgres:16 on first run.
+ * DOCKER_HOST is taken from the caller's environment when set; otherwise the
+ * default docker context is used. Only when that is unreachable is the
+ * OrbStack socket below tried, as a DEFAULT that never overrides a caller value.
+ * With no reachable daemon the suite fails loudly in beforeAll (no silent pass).
+ */
 jest.setTimeout(180000);
 
-const DOCKER_HOST = 'unix:///Users/xavier/.orbstack/run/docker.sock';
+const ORBSTACK_SOCKET = 'unix:///Users/xavier/.orbstack/run/docker.sock';
 const PRISMA_DIR = __dirname;
 const MIGRATIONS = join(PRISMA_DIR, 'migrations');
+// The two migrations that predate this change: applied first so legacy Video
+// rows exist before the new migration runs. Pinned by name on purpose.
 const LEGACY = ['20240624035006_init', '20240629030819_changed_dates_to_big_int'];
+const NEW_MIGRATION = '20261117120000_add_users_and_video_owner';
 const REPO_ROOT = resolve(PRISMA_DIR, '..', '..', '..');
 
 const suffix = randomBytes(4).toString('hex');
-const container = `run-1-20261117-st1-u1-pg-${suffix}`;
+const container = `db-server-migration-spec-${suffix}`;
 const dbPassword = randomBytes(12).toString('hex');
 let tmp: string;
 let url: string;
 
+let dockerEnv: NodeJS.ProcessEnv = process.env;
+
 function docker(args: string[]): string {
   return execFileSync('docker', args, {
-    env: { ...process.env, DOCKER_HOST },
+    env: dockerEnv,
     encoding: 'utf8',
+    stdio: 'pipe',
   }).trim();
+}
+
+function selectDockerEnv(): void {
+  if (process.env.DOCKER_HOST) {
+    dockerEnv = process.env;
+  } else {
+    try {
+      docker(['version', '--format', '{{.Server.Version}}']);
+      return;
+    } catch {
+      dockerEnv = { ...process.env, DOCKER_HOST: ORBSTACK_SOCKET };
+    }
+  }
+  try {
+    docker(['version', '--format', '{{.Server.Version}}']);
+  } catch (e) {
+    throw new Error(
+      'migration.spec needs a reachable Docker daemon (set DOCKER_HOST or start Docker/OrbStack): ' +
+        String(e)
+    );
+  }
 }
 
 function psql(sql: string): string {
@@ -66,7 +100,8 @@ async function waitReady(): Promise<void> {
 
 describe('prisma migrations over legacy Video rows', () => {
   beforeAll(async () => {
-    tmp = mkdtempSync(join(tmpdir(), 'u1-migration-'));
+    selectDockerEnv();
+    tmp = mkdtempSync(join(tmpdir(), 'db-server-migration-spec-'));
     docker([
       'run', '-d', '--name', container,
       '-e', `POSTGRES_PASSWORD=${dbPassword}`,
@@ -84,15 +119,15 @@ describe('prisma migrations over legacy Video rows', () => {
     } catch {
       /* container already gone */
     }
-    // temp dir lives under os tmpdir; left for the OS to clean (no rm in profile)
+    // the temp dir under os.tmpdir() is intentionally not removed
   });
 
   it('applies the new migration over legacy rows, which survive with owner_id NULL', () => {
     const all = readdirSync(MIGRATIONS).filter((d) =>
       existsSync(join(MIGRATIONS, d, 'migration.sql'))
     );
-    const added = all.filter((d) => !LEGACY.includes(d));
-    expect(added).toHaveLength(1);
+    expect(all).toContain(NEW_MIGRATION);
+    for (const d of LEGACY) expect(all).toContain(d);
 
     cpSync(join(PRISMA_DIR, 'schema.prisma'), join(tmp, 'schema.prisma'));
     mkdirSync(join(tmp, 'migrations'));
@@ -110,7 +145,7 @@ describe('prisma migrations over legacy Video rows', () => {
         `('legacy-1', 1, 2, false, 'a.mp4'), ('legacy-2', 3, null, true, 'b.mp4')`
     );
 
-    cpSync(join(MIGRATIONS, added[0]), join(tmp, 'migrations', added[0]), {
+    cpSync(join(MIGRATIONS, NEW_MIGRATION), join(tmp, 'migrations', NEW_MIGRATION), {
       recursive: true,
     });
     deploy();
@@ -118,5 +153,77 @@ describe('prisma migrations over legacy Video rows', () => {
     expect(psql(`select count(*) from "Video" where owner_id is null`)).toBe('2');
     expect(psql(`select count(*) from "Video" where title is null and duration_s is null`)).toBe('2');
     expect(psql(`select count(*) from "User"`)).toBe('0');
+  });
+
+  it('creates the expected User and Video columns, index and foreign key', () => {
+    const cols = (table: string) =>
+      psql(
+        `select column_name || ':' || data_type || ':' || is_nullable from information_schema.columns ` +
+          `where table_schema = 'public' and table_name = '${table}' order by column_name`
+      ).split('\n');
+
+    expect(cols('User')).toEqual([
+      'created_at:bigint:NO',
+      'password_hash:text:NO',
+      'user_id:text:NO',
+      'username:text:NO',
+    ]);
+
+    const video = cols('Video');
+    expect(video).toContain('owner_id:text:YES');
+    expect(video).toContain('title:text:YES');
+    expect(video).toContain('duration_s:integer:YES');
+
+    expect(
+      psql(
+        `select a.attname from pg_index i join pg_class c on c.oid = i.indrelid ` +
+          `join pg_attribute a on a.attrelid = c.oid and a.attnum = any(i.indkey) ` +
+          `where c.relname = 'User' and i.indisprimary`
+      )
+    ).toBe('user_id');
+
+    expect(
+      psql(
+        `select i.indisunique::text || ':' || a.attname from pg_class ic join pg_index i on i.indexrelid = ic.oid ` +
+          `join pg_attribute a on a.attrelid = i.indrelid and a.attnum = any(i.indkey) ` +
+          `where ic.relname = 'User_username_key'`
+      )
+    ).toBe('true:username');
+
+    expect(
+      psql(
+        `select a.attname from pg_class ic join pg_index i on i.indexrelid = ic.oid ` +
+          `join pg_attribute a on a.attrelid = i.indrelid and a.attnum = any(i.indkey) ` +
+          `where ic.relname = 'Video_owner_id_idx' and not i.indisunique`
+      )
+    ).toBe('owner_id');
+
+    expect(
+      psql(
+        `select conrelid::regclass::text || ':' || confrelid::regclass::text || ':' || confdeltype::text || ':' || confupdtype::text || ':' ||` +
+          `(select string_agg(attname, ',') from pg_attribute where attrelid = conrelid and attnum = any(conkey)) || ':' || ` +
+          `(select string_agg(attname, ',') from pg_attribute where attrelid = confrelid and attnum = any(confkey)) ` +
+          `from pg_constraint where conname = 'Video_owner_id_fkey' and contype = 'f'`
+      )
+    ).toBe('"Video":"User":n:c:owner_id:user_id');
+  });
+
+  it('keeps schema.prisma and the migrated database in agreement', () => {
+    // exit code 0 means no drift; execFileSync throws on a non-zero exit
+    execFileSync(
+      'npx',
+      [
+        'prisma', 'migrate', 'diff',
+        '--from-url', url,
+        '--to-schema-datamodel', join(tmp, 'schema.prisma'),
+        '--exit-code',
+      ],
+      {
+        cwd: REPO_ROOT,
+        env: { ...process.env, DATABASE_URL: url, DIRECT_URL: url },
+        encoding: 'utf8',
+        stdio: 'pipe',
+      }
+    );
   });
 });
