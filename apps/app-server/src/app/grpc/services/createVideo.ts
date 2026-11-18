@@ -28,19 +28,19 @@ export const createVideo = async ({requestObject: {video_id, start_time},callBac
          * being generated. I need to make sure the generated output keeps the snake_case
          * The typings for the protobufs have the wrong format
          */
-        // @ts-ignore
+        // @ts-expect-error keepCase runtime field is snake_case; generated type is camelCase
         video_id: video_id, start_time: start_time
       }, (err, response) =>{
         if(err){
           errorHandler({error: err});
           return;
         }
-        // @ts-ignore
+        // @ts-expect-error keepCase runtime field is snake_case; generated type is camelCase
         const {is_streaming, video_path, thumbnail_path } = response.results
         try{
           callBack({
             results: {
-              // @ts-ignore
+              // @ts-expect-error keepCase runtime field is snake_case; generated type is camelCase
               video_id, start_time,
               is_streaming, video_path, thumbnail_path
             }

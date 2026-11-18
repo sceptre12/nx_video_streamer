@@ -28,7 +28,7 @@ export const updateVideoStreamingState = async ({requestObject: {video_id, has_s
          * being generated. I need to make sure the generated output keeps the snake_case
          * The typings for the protobufs have the wrong format
          */
-        // @ts-ignore
+        // @ts-expect-error keepCase runtime field is snake_case; generated type is camelCase
         video_id, has_streaming_started
       }, (err, response) =>{
         if(err){
@@ -36,11 +36,11 @@ export const updateVideoStreamingState = async ({requestObject: {video_id, has_s
           errorHandler({error: err});
           return;
         }
-        // @ts-ignore
+        // @ts-expect-error keepCase runtime field is snake_case; generated type is camelCase
         const {update_complete} = response
         try{
           callBack({
-            // @ts-ignore
+            // @ts-expect-error keepCase runtime field is snake_case; generated type is camelCase
             update_complete
           });
           resolve(null);
