@@ -6,6 +6,11 @@
   "tags": [],
   "implicitDependencies": ["protos"],
   "targets": {
+    "test": {
+      "options": {
+        "passWithNoTests": true
+      }
+    },
     "build": {
       "executor": "@nx/esbuild:esbuild",
       "outputs": ["{options.outputPath}"],
