@@ -4,6 +4,8 @@ import * as protoLoader from '@grpc/proto-loader'
 import { GRPC_PORT } from '@globals/constants';
 import type {ProtoGrpcType} from '@generated/protobuf-types';
 
+// Contract runtime-env-ports: DB_GRPC_ADDR, default localhost:50051 (db-server:50051 in containers).
+const DB_GRPC_ADDR = process.env.DB_GRPC_ADDR || `localhost:${GRPC_PORT}`;
 
 const createGrpcClient = () => {
   console.log("Setting up Grpc Client");
@@ -20,7 +22,7 @@ const createGrpcClient = () => {
 
   const VIDEO_PROTO = (grpc.loadPackageDefinition(packageDefinition) as unknown) as ProtoGrpcType;
 
-  return new VIDEO_PROTO.src.video.v1.DbComService(`localhost:${GRPC_PORT}`, grpc.credentials.createInsecure());
+  return new VIDEO_PROTO.src.video.v1.DbComService(DB_GRPC_ADDR, grpc.credentials.createInsecure());
 }
 
 const videoGrpcClient = createGrpcClient();
