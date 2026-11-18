@@ -6,6 +6,7 @@ import {createVideoOpts, updateVideoStreamingStateOpts} from './video_schema'
 import { FastifyInstance } from 'fastify';
 import type {ICreateVideoBody, IUpdateVideoStreamingStateBody, IUpdateVideoStreamingStateParams} from './video_schema'
 import { createVideo, updateVideoStreamingState } from './../../../../grpc/services';
+import type {} from './../../../../auth/hook'; // brings in the FastifyRequest.sessionUserId augmentation
 import { errorHandler } from '../../../utils/errorHandler';
 import type { CreateVideoResponse } from 'protos/libs/gen/protobuf-types/src/video/v1/CreateVideoResponse';
 import type { UpdateVideoStreamingStateResponse } from 'protos/libs/gen/protobuf-types/src/video/v1/UpdateVideoStreamingStateResponse';
@@ -34,7 +35,7 @@ export default async function(fastify: FastifyInstance) {
     // Create the video in the db server and respond to the client with the results
     await createVideo({
       requestObject: {
-        video_id, start_time
+        video_id, start_time, owner_id: request.sessionUserId as string
       },
       callBack: sendSuccessMessageToClient,
       errorHandler: createVideoErrorHandler
@@ -68,7 +69,8 @@ export default async function(fastify: FastifyInstance) {
     await updateVideoStreamingState({
       requestObject: {
         video_id,
-        has_streaming_started
+        has_streaming_started,
+        owner_id: request.sessionUserId as string
       },
       callBack: sendSuccessMessageToClient,
       errorHandler: updateVideoStreamHandler
