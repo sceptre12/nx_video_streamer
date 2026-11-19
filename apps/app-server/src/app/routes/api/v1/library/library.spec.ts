@@ -2,6 +2,8 @@ import { randomBytes } from 'crypto';
 import Fastify, { FastifyInstance } from 'fastify';
 import { Writable } from 'stream';
 import { PrismaClient } from '@prisma/client';
+import type { VideoRecord } from '../../../../grpc/casing';
+import { toLibraryVideo } from './library_mapper';
 import { startDbServer, startPostgres, DbServerChild, ThrowawayPostgres } from '../../../../grpc/test-support';
 
 /*
@@ -92,6 +94,9 @@ describe('GET /api/v1/library', () => {
       thumbnail_url: null,
       stream_url: `/api/v1/videos/${a1}/stream`,
     });
+    const second = bodyA.videos.find((v: { video_id: string }) => v.video_id === a2);
+    expect(second.title).toBeNull();
+    expect(second.duration_s).toBeNull();
     for (const v of bodyA.videos) expect(Object.keys(v).sort()).toEqual(['duration_s', 'stream_url', 'thumbnail_url', 'title', 'video_id']);
 
     const resB = await getLibrary(b.cookie);
@@ -140,5 +145,57 @@ describe('GET /api/v1/library', () => {
     const res = await getLibrary(u.cookie);
     expect(res.headers['cache-control']).toBe('private, no-store');
     expect(res.headers['x-cache']).toBeUndefined();
+  });
+
+  describe('failure path', () => {
+    const errorEntry = () =>
+      logs.split('\n').filter(Boolean).map((l) => JSON.parse(l)).find((l) => l.msg === 'library lookup failed');
+    const expectInternal = (res: { statusCode: number; json: () => unknown }) => {
+      expect(res.statusCode).toBe(500);
+      expect(res.json()).toEqual({ version: 'v1', error: { code: 'internal_error', message: 'internal error' } });
+    };
+
+    it('answers 500 internal_error and logs when the lookup reports an error', async () => {
+      const u = await login();
+      const mod = await import('../../../../grpc/services/ownerVideos');
+      const spy = jest.spyOn(mod, 'listVideosByOwner').mockImplementation(async ({ errorHandler }) => {
+        errorHandler({ error: new Error('lookup-boom'), code: 500 });
+        return [];
+      });
+      try {
+        logs = '';
+        const res = await getLibrary(u.cookie);
+        expect(spy).toHaveBeenCalledTimes(1);
+        expectInternal(res);
+        expect(res.headers['cache-control']).toBeUndefined();
+        const entry = errorEntry();
+        expect(entry).toBeDefined();
+        expect(entry.err.message).toBe('lookup-boom');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('answers 500 internal_error and logs when the lookup resolves with nothing', async () => {
+      const u = await login();
+      const mod = await import('../../../../grpc/services/ownerVideos');
+      const spy = jest.spyOn(mod, 'listVideosByOwner').mockResolvedValue(null);
+      try {
+        logs = '';
+        const res = await getLibrary(u.cookie);
+        expect(spy).toHaveBeenCalledTimes(1);
+        expectInternal(res);
+        expect(errorEntry()).toBeDefined();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  });
+
+  describe('toLibraryVideo', () => {
+    it('maps a record without title and duration_s to nulls', () => {
+      const out = toLibraryVideo({ video_id: 'v-1' } as VideoRecord);
+      expect(out).toEqual({ video_id: 'v-1', title: null, duration_s: null, thumbnail_url: null, stream_url: '/api/v1/videos/v-1/stream' });
+    });
   });
 });
