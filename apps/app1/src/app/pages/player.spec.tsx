@@ -11,5 +11,7 @@ it('selecting a video plays its relative stream url', async () => {
   renderAt('/');
   fireEvent.click(await screen.findByText('Demo one'));
   const video = (await screen.findByTestId('player')) as HTMLVideoElement;
-  expect(video.getAttribute('src')).toBe('/api/v1/video/v1/stream');
+  expect(video.getAttribute('src')).toBe('/api/v1/videos/v1/stream');
+  expect(video.controls).toBe(true);
+  expect(video.autoplay).toBe(true);
 });

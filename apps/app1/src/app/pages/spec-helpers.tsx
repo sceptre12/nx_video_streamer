@@ -9,7 +9,7 @@ export const json = (status: number, body?: unknown) =>
 
 export const user = { version: 'v1', user_id: '1', username: 'alice' };
 export const videos = [
-  { video_id: 'v1', title: 'Demo one', duration_s: 5, thumbnail_url: null, stream_url: '/api/v1/video/v1/stream' },
+  { video_id: 'v1', title: 'Demo one', duration_s: 5, thumbnail_url: null, stream_url: '/api/v1/videos/v1/stream' },
 ];
 
 /** Stubs global fetch by "METHOD path" key; unknown calls fail the test. */

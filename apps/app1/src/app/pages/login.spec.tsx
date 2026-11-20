@@ -5,7 +5,7 @@ jest.mock('./webcam', () => ({ __esModule: true, default: () => null }));
 
 it('wrong password shows an error and no library', async () => {
   stubFetch({
-    'GET /api/v1/auth/me': json(401, { version: 'v1', error: { code: 'unauthorized', message: 'no session' } }),
+    'GET /api/v1/auth/me': json(401, { version: 'v1', error: { code: 'unauthenticated', message: 'no session' } }),
     'POST /api/v1/auth/login': json(401, { version: 'v1', error: { code: 'invalid_credentials', message: 'Invalid username or password' } }),
   });
   renderAt('/login');
@@ -14,4 +14,26 @@ it('wrong password shows an error and no library', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
   expect((await screen.findByRole('alert')).textContent).toContain('Invalid username or password');
   expect(screen.queryByText('Library')).toBeNull();
+});
+
+it('a login that returns no user shows a generic failure', async () => {
+  stubFetch({
+    'GET /api/v1/auth/me': json(401, { version: 'v1', error: { code: 'unauthenticated', message: 'no session' } }),
+    'POST /api/v1/auth/login': json(204),
+  });
+  renderAt('/login');
+  fireEvent.change(await screen.findByLabelText('Username'), { target: { value: 'alice' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
+  expect((await screen.findByRole('alert')).textContent).toBe('Login failed');
+});
+
+it('submitting the form prevents the browser default', async () => {
+  stubFetch({
+    'GET /api/v1/auth/me': json(401, { version: 'v1', error: { code: 'unauthenticated', message: 'no session' } }),
+    'POST /api/v1/auth/login': json(204),
+  });
+  renderAt('/login');
+  const form = (await screen.findByRole('button', { name: 'Log in' })).closest('form') as HTMLFormElement;
+  expect(fireEvent.submit(form)).toBe(false);
+  await screen.findByRole('alert');
 });

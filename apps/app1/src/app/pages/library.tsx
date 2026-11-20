@@ -8,7 +8,7 @@ export function LibraryPage() {
   const [videos, setVideos] = useState<LibraryVideo[] | null>(null);
   const [selected, setSelected] = useState<LibraryVideo | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { user, logout, setUser } = useSession();
+  const { user, logout, logoutError, setUser } = useSession();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,6 +34,7 @@ export function LibraryPage() {
       <button onClick={() => navigate('/webcam')}>Webcam</button>
       <button onClick={() => logout()}>Log out</button>
       {error && <p role="alert">{error}</p>}
+      {logoutError && <p role="alert">{logoutError}</p>}
       {videos && videos.length === 0 && <p>No videos yet.</p>}
       <ul>
         {videos?.map((v) => (

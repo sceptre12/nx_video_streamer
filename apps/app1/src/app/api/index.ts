@@ -1,5 +1,3 @@
-import { resolveJson } from "@nx-video-streamer/globals"
-
 
 interface ApiResponse<T>{
   error: null | Error;
@@ -19,61 +17,6 @@ export interface VideoItem {
   is_streaming: boolean;
   thumbnail_path: string;
   video_path: string;
-}
-
-export const createVideo = async ({video_id, start_time}: CreateVideoParams): Promise<ApiResponse<VideoItem>> => {
-  try{
-    const result = await resolveJson<VideoItem>(fetch(`/api/${API_VERSION}/video/create`,{
-      method: 'POST',
-      body: JSON.stringify({
-        video_id,
-        start_time
-      }),
-      credentials: 'include',
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }))
-
-    return {
-      error: null,
-      data: result
-    }
-  }catch(error){
-    return {
-      error: error as Error,
-      data: undefined
-    }
-  }
-}
-
-
-export const toggleStreamingState = async({video_id, has_started}: {video_id: string, has_started: boolean}):Promise<ApiResponse<boolean>> => {
-  try{
-    const result = await resolveJson<{success: boolean}>(fetch(`/api/${API_VERSION}/video/${video_id}`,{
-      method: 'POST',
-      body: JSON.stringify({
-        has_streaming_started: has_started
-      }),
-      credentials: 'include',
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }))
-
-    if(result){
-      return {
-        error: null,
-        data: result.success
-      }
-    }
-    throw new Error("Server did not return any result");
-  }catch(error){
-    return {
-      error: error as Error,
-      data: undefined
-    }
-  }
 }
 
 export interface AuthUser {
@@ -152,3 +95,25 @@ export const getMe = () => wrap(() => request<AuthUser>('/auth/me'));
 
 export const getLibrary = () =>
   wrap(async () => (await request<{ version: string; videos: LibraryVideo[] }>('/library'))?.videos);
+
+const jsonHeaders = { 'Content-Type': 'application/json' };
+
+export const createVideo = ({ video_id, start_time }: CreateVideoParams) =>
+  wrap(() =>
+    request<VideoItem>('/video/create', {
+      method: 'POST',
+      body: JSON.stringify({ video_id, start_time }),
+      headers: jsonHeaders,
+    })
+  );
+
+export const toggleStreamingState = ({ video_id, has_started }: { video_id: string; has_started: boolean }) =>
+  wrap(async () => {
+    const result = await request<{ success: boolean }>(`/video/${video_id}`, {
+      method: 'POST',
+      body: JSON.stringify({ has_streaming_started: has_started }),
+      headers: jsonHeaders,
+    });
+    if (!result) throw new Error('Server did not return any result');
+    return result.success;
+  });
