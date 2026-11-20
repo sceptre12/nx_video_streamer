@@ -47,12 +47,31 @@ export async function waitForStack(timeoutMs = 240_000): Promise<void> {
     if (states.every((s) => s.endsWith('=healthy')) && seed === 'exited 0') return;
     await sleep(3000);
   }
+  printDiagnostics();
   throw new Error(`stack not ready before timeout: ${last}`);
+}
+
+/** Best-effort failure diagnostics to stderr (teardown removes the containers); never masks the original error. */
+function printDiagnostics(): void {
+  const attempts: Array<[string, () => string]> = [
+    ['compose ps -a', () => compose(['ps', '-a'], true)],
+    ['ui logs (last 60)', () => compose(['logs', '--no-color', '--tail', '60', 'ui'], true)],
+    ['ui health', () => inspect('ui', '{{json .State.Health}}', true)],
+  ];
+  for (const [label, run] of attempts) {
+    try {
+      process.stderr.write(`--- ${label} ---\n${run()}\n`);
+    } catch {
+      // diagnostics are best-effort
+    }
+  }
 }
 
 export function stackUp(): void {
   // apps/app1/Dockerfile COPYs dist/apps/app1; the image build has no network, so build the UI first.
   sh('npx', ['--no-install', 'nx', 'build', 'app1']);
+  // umask 077 builds leave files 0600/dirs 0700, which COPY preserves and the non-root nginx worker cannot read (403).
+  sh('chmod', ['-R', 'a+rX', 'dist/apps/app1']);
   // Long-running services first, then the one-shot seed (no --wait on an exiting container).
   compose(['up', '-d', '--build', ...LONG_RUNNING]);
   compose(['up', '-d', 'seed']);
