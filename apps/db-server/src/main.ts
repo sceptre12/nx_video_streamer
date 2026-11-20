@@ -3,10 +3,19 @@ import fastifyIO from "fastify-socket.io";
 import type {Server} from 'socket.io';
 import { app } from './app/app';
 import { DB_SERVER_PORT } from '@globals/constants';
-import { createWriteSteamInstance, closeWriteStreamInstance, streamVideoToStorage } from './app/video_processor';
+import { CaptureSession, openCaptureSession, writeCaptureChunk, closeCaptureSession } from './app/video_processor';
+import { socketAuth } from './app/plugins/socketAuth';
 
 const host = process.env.HOST ?? 'localhost';
 const port = process.env.PORT ? Number(process.env.PORT) : DB_SERVER_PORT;
+
+// Contract runtime-env-ports: JWT_SECRET has no default, at least 32 bytes; refuse to start without it.
+const JWT_SECRET = process.env.JWT_SECRET ?? '';
+if (Buffer.byteLength(JWT_SECRET) < 32) {
+  console.error('JWT_SECRET is required (at least 32 bytes); refusing to start');
+  process.exit(1);
+}
+const UI_HOST_PORT = process.env.UI_HOST_PORT || '36000';
 
 // Instantiate Fastify with some config
 const server = Fastify({
@@ -18,7 +27,8 @@ server.register(app);
 // // Registers socket service
 server.register(fastifyIO, {
   cors: {
-    origin: `*`,
+    origin: [`http://localhost:${UI_HOST_PORT}`],
+    credentials: true,
   }
 });
 
@@ -53,28 +63,85 @@ server.ready().then(() =>{
    * Create namespace so that multiple ui's could set up streaming. 
    * Create a better state managment feature for determing if a stream is active or not
    */
+  server.io.use(socketAuth(JWT_SECRET));
   server.io.on('connection', (socket)=>{
-    console.info("Socket connected!", socket.id)
+    // Capture state lives on this socket only; cleared on end and on disconnect.
+    const user_id = socket.data.user_id as string;
+    let session: CaptureSession | undefined;
+    let opening = false;
+    // Chunks that arrive while an open is in progress; flushed in order once the session is set, else discarded.
+    const MAX_PENDING_BYTES = 8 * 1024 * 1024;
+    let pending: Buffer[] = [];
+    let pending_bytes = 0;
+    const discardPending = () => { pending = []; pending_bytes = 0; };
+    const clear = async () => {
+      const s = session;
+      session = undefined;
+      await closeCaptureSession(s);
+    };
+
     // @ts-expect-error socket.io event name is not in the typed event map
-    socket.on('initalizeStream', (data) =>{
-      // Create a write stream based on client video path
-      console.log("Creating write stream", data);
-      createWriteSteamInstance(data.video_path);
+    socket.on('initalizeStream', async (data: {video_id?: unknown}, ack?: (r: unknown) => void) =>{
+      // A client-sent video_path is ignored; the path is derived server-side from the owned video_id.
+      // One open at a time per socket: an overlapping initalizeStream is rejected, so no WriteStream leaks.
+      if (opening) {
+        if (typeof ack === 'function') ack({ok: false, error: 'busy'});
+        return;
+      }
+      opening = true;
+      discardPending();
+      const opened_ref: {current?: CaptureSession} = {};
+      try {
+        await clear();
+        const opened = await openCaptureSession(user_id, data?.video_id as string, () => {
+          // Stream failed asynchronously: drop this session (if still current) and release the stream.
+          if (session === opened_ref.current) void clear();
+        });
+        opened_ref.current = opened;
+        if (!socket.connected) {
+          // Disconnected while opening: the disconnect handler found no session, so close it here.
+          await closeCaptureSession(opened);
+          return;
+        }
+        session = opened;
+        for (const buf of pending) writeCaptureChunk(session, buf);
+        if (typeof ack === 'function') ack({ok: true});
+      } catch (e) {
+        const code = (e as {code?: string}).code ?? 'internal';
+        if (typeof ack === 'function') ack({ok: false, error: code});
+      } finally {
+        opening = false;
+        discardPending();
+      }
     })
     // @ts-expect-error socket.io event name is not in the typed event map
-    socket.on('webcamVideoChunk', (data)=>{
-      console.log("Streaming video");
-      streamVideoToStorage({video_chunk: data.video_chunk});
+    socket.on('webcamVideoChunk', (data: {video_chunk?: unknown})=>{
+      const chunk = data?.video_chunk;
+      if (opening) {
+        const buf = Buffer.isBuffer(chunk) ? chunk
+          : chunk instanceof ArrayBuffer ? Buffer.from(chunk)
+          : ArrayBuffer.isView(chunk) ? Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength)
+          : null;
+        if (!buf) return;
+        if (pending_bytes + buf.length > MAX_PENDING_BYTES) {
+          console.error('webcamVideoChunk dropped: pending buffer over 8 MiB while the capture session opens');
+          return;
+        }
+        pending.push(buf);
+        pending_bytes += buf.length;
+        return;
+      }
+      writeCaptureChunk(session, chunk);
     })
 
     // @ts-expect-error socket.io event name is not in the typed event map
-    socket.on('endWebcamStream', async (data, ack) =>{
-      // End the stream.. additional data is provided for more clean up operations
-      console.log("Ending video stream")
-      await closeWriteStreamInstance();
-      // indicates to the client the write stream has been closed
-      ack(true);
+    socket.on('endWebcamStream', async (_data: unknown, ack?: (r: unknown) => void) =>{
+      // Acts only on this socket's own stream (the video_id in the payload is not trusted).
+      await clear();
+      if (typeof ack === 'function') ack(true);
     })
+
+    socket.on('disconnect', () => { void clear(); });
   });
 })
 

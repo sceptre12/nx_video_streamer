@@ -1,58 +1,18 @@
 import videoGrpcClient from '../index'
-import { ErrorResponseParam } from '../../routes/utils/errorHandler';
-import { UpdateVideoStreamingStateResponse } from 'protos/libs/gen/protobuf-types/src/video/v1/UpdateVideoStreamingStateResponse';
-
-
-
-interface UpdateVideoStreamingStateParams {
-  requestObject: {
-    video_id: string;
-    has_streaming_started: boolean;
-  },
-  callBack: (arg: UpdateVideoStreamingStateResponse) => void,
-  errorHandler: (arg: ErrorResponseParam) => void
-}
+import { toWire } from '../casing';
+import { callUnary, UnaryParams } from './callUnary';
+import type { UpdateVideoStreamingStateResponse } from 'protos/libs/gen/protobuf-types/src/video/v1/UpdateVideoStreamingStateResponse';
+import type { UpdateVideoStreamingStateRequest } from 'protos/libs/gen/protobuf-types/src/video/v1/UpdateVideoStreamingStateRequest';
 
 /**
- * Sends a message through the grpc service to the db server to create a new video record.
- * The response will contain more information for where the db server is going to store the video 
- * and store the video thumbnail
- * @param param0 
+ * Tells the db server a video's streaming state changed. `owner_id` is required: the db server
+ * updates only where the row's owner matches, else NOT_FOUND.
  */
-export const updateVideoStreamingState = async ({requestObject: {video_id, has_streaming_started},callBack, errorHandler}: UpdateVideoStreamingStateParams) =>{
-  return new Promise((resolve,reject) =>{
-    try{
-      videoGrpcClient.UpdateVideoStreamingState({
-        /**
-         * The reason there's a differnece in keys for the message is due to how the protobufs are
-         * being generated. I need to make sure the generated output keeps the snake_case
-         * The typings for the protobufs have the wrong format
-         */
-        // @ts-expect-error keepCase runtime field is snake_case; generated type is camelCase
-        video_id, has_streaming_started
-      }, (err, response) =>{
-        if(err){
-          console.log("updateVideoStreamingState e1",err);
-          errorHandler({error: err});
-          return;
-        }
-        // @ts-expect-error keepCase runtime field is snake_case; generated type is camelCase
-        const {update_complete} = response
-        try{
-          callBack({
-            // @ts-expect-error keepCase runtime field is snake_case; generated type is camelCase
-            update_complete
-          });
-          resolve(null);
-        }catch(error){
-          console.log("updateVideoStreamingState e2",error)
-          errorHandler({error});
-        } 
-      });
-    }catch (error){
-      console.log("updateVideoStreamingState e3",error);
-      errorHandler({error})
-      reject(error);
-    }
-  })  
-}
+export const updateVideoStreamingState = (
+  p: UnaryParams<{ video_id: string; has_streaming_started: boolean; owner_id: string }, UpdateVideoStreamingStateResponse & { update_complete: boolean }>
+) =>
+  callUnary(
+    (req, cb) => videoGrpcClient.UpdateVideoStreamingState(toWire<UpdateVideoStreamingStateRequest>(req), cb),
+    (raw) => ({ update_complete: Boolean((raw as { update_complete?: unknown } | null)?.update_complete) }),
+    p
+  );
