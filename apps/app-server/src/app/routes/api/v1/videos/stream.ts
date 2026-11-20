@@ -68,7 +68,9 @@ export default async function (fastify: FastifyInstance) {
     if (parsed.kind === 'full') {
       done(200);
       reply.header('Content-Length', String(total));
-      return reply.status(200).send(createReadStream(file.path));
+      // bound the read to the stat'd size: capture may still be appending, and Content-Length must hold
+      if (total === 0) return reply.status(200).send(Buffer.alloc(0));
+      return reply.status(200).send(createReadStream(file.path, { start: 0, end: total - 1 }));
     }
 
     const { start, end } = parsed.range;

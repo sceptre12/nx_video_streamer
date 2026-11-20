@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { mkdirSync, mkdtempSync, realpathSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'fs';
+import { appendFileSync, mkdirSync, mkdtempSync, realpathSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import Fastify, { FastifyInstance } from 'fastify';
@@ -409,6 +409,45 @@ describe('stream route: ETag, lookup failures and log status', () => {
     logs = '';
     await getStream(id, { cookie: owner.cookie });
     expect(logEntry('video stream').status).toBe(404);
+  });
+
+  describe('full-body 200 bounds', () => {
+    it('sends exactly Content-Length bytes, equal to the file size', async () => {
+      const res = await getStream(videoId, { cookie: owner.cookie });
+      expect(res.statusCode).toBe(200);
+      expect(res.rawPayload.length).toBe(Number(res.headers['content-length']));
+      expect(res.rawPayload.length).toBe(statSync(join(STORAGE, videoId, `${videoId}.mp4`)).size);
+    });
+
+    it('answers 200 with an empty body and the same headers for an empty file', async () => {
+      const empty = await seedVideo(owner.user_id, Buffer.alloc(0));
+      const res = await getStream(empty, { cookie: owner.cookie });
+      expect(res.statusCode).toBe(200);
+      expect(res.rawPayload.length).toBe(0);
+      expect(res.headers['content-length']).toBe('0');
+      expect(res.headers['content-range']).toBeUndefined();
+      expectStreamHeaders(res.headers);
+    });
+
+    it('does not send bytes appended after the stat (growing file)', async () => {
+      const grow = await seedVideo(owner.user_id, BYTES);
+      const mod = await import('./storage');
+      const orig = mod.resolveVideoFile;
+      const spy = jest.spyOn(mod, 'resolveVideoFile').mockImplementation(async (...a) => {
+        const r = await orig(...a);
+        if (r) appendFileSync(r.path, randomBytes(500)); // capture appends between the stat and the read
+        return r;
+      });
+      try {
+        const res = await getStream(grow, { cookie: owner.cookie });
+        expect(res.statusCode).toBe(200);
+        expect(res.headers['content-length']).toBe(String(BYTES.length));
+        expect(res.rawPayload.length).toBe(BYTES.length);
+        expect(res.rawPayload.equals(BYTES)).toBe(true);
+      } finally {
+        spy.mockRestore();
+      }
+    });
   });
 
   describe('lookup failures', () => {
