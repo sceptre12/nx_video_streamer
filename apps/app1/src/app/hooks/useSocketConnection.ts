@@ -3,7 +3,6 @@ import { io } from 'socket.io-client';
 import type {Socket} from 'socket.io-client'
 import type { MediaObjectType } from "../app";
 import type {RefObject} from "react";
-import { DB_SERVER_PORT } from "@globals/constants";
 import * as dayjs from 'dayjs';
 import { toggleStreamingState } from "../api";
 import type { DefaultEventsMap } from "socket.io/dist/typed-events";
@@ -13,8 +12,6 @@ export interface useSocketConnectionParams{
   videoRef: RefObject<HTMLVideoElement>;
   setMediaObject: React.Dispatch<React.SetStateAction<MediaObjectType>>
 }
-
-const SERVER_DOMAIN = `http://localhost:${DB_SERVER_PORT}`
 
 export const useSocketConnection = ({mediaObject,videoRef, setMediaObject }: useSocketConnectionParams) =>{
 
@@ -29,7 +26,7 @@ export const useSocketConnection = ({mediaObject,videoRef, setMediaObject }: use
     console.log("Socket connection useEffect")
     if(!socketConnection && mediaObject.stream){
       try{
-        setSocketConnect(io(SERVER_DOMAIN));
+        setSocketConnect(io({ path: '/socket.io', withCredentials: true }));
       }catch(e){
         console.error(e);
       }
@@ -43,8 +40,7 @@ export const useSocketConnection = ({mediaObject,videoRef, setMediaObject }: use
         // End the current stream going on
 
         socketConnection.emit('endWebcamStream', {
-          video_id: mediaObject.video_id,
-          video_path: mediaObject.video_path
+          video_id: mediaObject.video_id
         }, (canClose: boolean)=>{
           // Waiting on the servers acknowledgment to close this useSocketConnection
           if(canClose){
@@ -101,8 +97,7 @@ export const useSocketConnection = ({mediaObject,videoRef, setMediaObject }: use
 
             // Start prepping server for the stream
             socketConnection.emit('initalizeStream', {
-                video_id: mediaObject.video_id,
-                video_path: mediaObject.video_path
+                video_id: mediaObject.video_id
             });
             
             // Indicate to the apps server that the stream has started
@@ -122,9 +117,7 @@ export const useSocketConnection = ({mediaObject,videoRef, setMediaObject }: use
                 // Send the Blob data via Socket.IO
                 console.log("emmitting event")
                 socketConnection.emit('webcamVideoChunk', {
-                  video_chunk: event.data,
-                  video_id: mediaObject.video_id,
-                  video_path: mediaObject.video_path
+                  video_chunk: event.data
                 });
               }
             };
