@@ -42,8 +42,9 @@ export async function closeClient(): Promise<void> {
 
 /**
  * True only when REDIS_URL is set and the client is connected. While the first connection is still
- * being made it waits (bounded by connectTimeout) for ready or failure; once Redis is known to be
- * unreachable (reconnecting/closed) it answers false at once, so callers can skip cache work.
+ * being made it waits at most 700 ms (the timer below; connectTimeout is 500 ms) for ready or
+ * failure; once Redis is known to be unreachable (reconnecting/closed) it answers false at once,
+ * so callers can skip cache work.
  */
 export async function isCacheReady(): Promise<boolean> {
   const c = getClient();

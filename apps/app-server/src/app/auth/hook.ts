@@ -43,8 +43,8 @@ export function registerAuthHook(fastify: FastifyInstance): void {
     }
     request.sessionUserId = userId;
     // The cache lookup follows JWT verification, never precedes it (contracts/cache-keys.md).
-    // user:v1:{user_id} is read-through; skipped entirely when Redis is not configured.
-    // Skipped when Redis is not configured or unreachable (fail open, no gRPC lookup).
+    // user:v1:{user_id} is read-through; skipped when Redis is not configured or is unreachable
+    // (fail open, no gRPC lookup).
     if (!process.env.REDIS_URL || !(await isCacheReady())) return;
     const cached = await getUser(userId);
     if (cached) {
