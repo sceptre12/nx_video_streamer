@@ -2,6 +2,7 @@
 .env.*
 node_modules
 dist
+!dist/apps/app1
 .git
 .nx
 tmp
