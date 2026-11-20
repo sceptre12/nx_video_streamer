@@ -38,18 +38,24 @@ The stack runs under Docker Compose with these services: `ui` (nginx serving the
 1. Generate the git-ignored `.env` file (never committed):
 
 ```
-scripts/stack-env.sh
+bash scripts/stack-env.sh
 ```
 
 It writes random values for `JWT_SECRET`, `POSTGRES_PASSWORD`, `DEMO_USER1_PASSWORD` and `DEMO_USER2_PASSWORD`. Do not copy these values into any tracked file.
 
-2. Start the stack:
+2. Build app1 on the host first, because the ui image copies the git-ignored `dist/apps/app1`:
+
+```
+npx nx build app1
+```
+
+3. Start the stack:
 
 ```
 docker compose up --build
 ```
 
-3. Open http://localhost:36000. This is the only port published to the host (`UI_HOST_PORT`, default 36000); the other services are reachable only on the compose network.
+4. Open http://localhost:36000. This is the only port published to the host (`UI_HOST_PORT`, default 36000); the other services are reachable only on the compose network.
 
 Demo accounts: the usernames are `demo1` and `demo2`. Their passwords are the values of `DEMO_USER1_PASSWORD` and `DEMO_USER2_PASSWORD` in your generated `.env`.
 
