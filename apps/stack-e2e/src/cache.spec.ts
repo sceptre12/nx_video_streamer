@@ -43,7 +43,7 @@ test.describe('library cache through the ui proxy', () => {
     browser,
     page,
   }) => {
-    // Warm demo1's entry (a HIT or MISS here is irrelevant; it only has to be cached).
+    // Warm demo1's entry: the login's own library call is ignored; the explicit GET below must be a HIT, which proves the entry is warmed.
     await loginAndCaptureFirstLibrary(page, 'demo1');
     const warm = await page.request.get(`${uiBaseUrl()}/api/v1/library`);
     expect(warm.status()).toBe(200);
@@ -59,6 +59,7 @@ test.describe('library cache through the ui proxy', () => {
       expect(first.status()).toBe(200);
       expect(first.headers()['x-cache']).toBe('MISS');
       const demo2Ids = ((await first.json()) as Library).videos.map((v) => v.video_id);
+      expect(demo2Ids.length).toBeGreaterThan(0);
       for (const id of demo1Ids) {
         expect(demo2Ids).not.toContain(id);
       }

@@ -19,7 +19,7 @@ export function compose(args: string[], quiet = false): string {
 }
 
 export function stackEnv(): void {
-  // Writes the git-ignored .env; never prints a secret.
+  // Creates the git-ignored .env if absent (an existing one is kept); never prints a secret.
   sh('bash', ['scripts/stack-env.sh'], true);
 }
 
