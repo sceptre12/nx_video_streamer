@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, realpathSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import Fastify, { FastifyInstance } from 'fastify';
@@ -7,6 +7,7 @@ import { Writable } from 'stream';
 import { PrismaClient } from '@prisma/client';
 import { startDbServer, startPostgres, DbServerChild, ThrowawayPostgres } from '../../../../grpc/test-support';
 import { parseRange } from './range';
+import { resolveVideoFile, videoStorageDir } from './storage';
 
 /*
  * GET /api/v1/videos/{video_id}/stream against the built db-server (npx nx build db-server first) over a
@@ -291,5 +292,152 @@ describe('parseRange', () => {
   });
   it('is full without a header', () => {
     expect(parseRange(undefined, 10)).toEqual({ kind: 'full' });
+  });
+});
+
+describe('parseRange edge cases', () => {
+  it('trims surrounding whitespace in the header', () => {
+    expect(parseRange(' bytes=0-9 ', 20)).toEqual({ kind: 'partial', range: { start: 0, end: 9 } });
+  });
+  it('rejects text before bytes= (anchored at the start)', () => {
+    expect(parseRange('xbytes=0-9', 20)).toEqual({ kind: 'unsatisfiable' });
+  });
+  it('rejects text after the range (anchored at the end)', () => {
+    expect(parseRange('bytes=0-9x', 20)).toEqual({ kind: 'unsatisfiable' });
+  });
+  it('rejects bytes= with both numbers empty', () => {
+    expect(parseRange('bytes=-', 20)).toEqual({ kind: 'unsatisfiable' });
+  });
+  it('rejects a suffix length beyond the safe-integer range', () => {
+    expect(parseRange('bytes=-99999999999999999999', 20)).toEqual({ kind: 'unsatisfiable' });
+  });
+  it('rejects a start beyond the safe-integer range', () => {
+    expect(parseRange('bytes=99999999999999999999-', 20)).toEqual({ kind: 'unsatisfiable' });
+  });
+  it('rejects an end beyond the safe-integer range', () => {
+    expect(parseRange('bytes=0-99999999999999999999', 20)).toEqual({ kind: 'unsatisfiable' });
+  });
+});
+
+describe('resolveVideoFile', () => {
+  const root = mkdtempSync(join(tmpdir(), 'app-server-stream-storage-'));
+  mkdirSync(join(root, 'dir'));
+  mkdirSync(join(root, '..x'));
+  writeFileSync(join(root, '..x', 'a.mp4'), 'abc');
+  writeFileSync(join(root, 'real.mp4'), 'abc');
+  symlinkSync(join(root, 'real.mp4'), join(root, 'link.mp4'));
+
+  it('defaults the storage directory to /data/videos when VIDEO_STORAGE_DIR is unset', () => {
+    const saved = process.env.VIDEO_STORAGE_DIR;
+    delete process.env.VIDEO_STORAGE_DIR;
+    try {
+      expect(videoStorageDir()).toBe('/data/videos');
+    } finally {
+      if (saved === undefined) delete process.env.VIDEO_STORAGE_DIR;
+      else process.env.VIDEO_STORAGE_DIR = saved;
+    }
+  });
+  it('accepts a directory whose name merely starts with two dots', async () => {
+    const file = await resolveVideoFile('..x/a.mp4', root);
+    expect(file?.path).toBe(realpathSync(join(root, '..x', 'a.mp4')));
+  });
+  it('is null for a missing, null, undefined or empty path', async () => {
+    expect(await resolveVideoFile(null, root)).toBeNull();
+    expect(await resolveVideoFile(undefined, root)).toBeNull();
+    expect(await resolveVideoFile('', root)).toBeNull();
+  });
+  it('is null for an absolute path even when it points inside the volume', async () => {
+    expect(await resolveVideoFile(join(root, 'real.mp4'), root)).toBeNull();
+  });
+  it('is null for a path that is the volume root or a parent of it', async () => {
+    expect(await resolveVideoFile('.', root)).toBeNull();
+    expect(await resolveVideoFile('..', root)).toBeNull();
+    expect(await resolveVideoFile('../', root)).toBeNull();
+  });
+  it('is null for a directory', async () => {
+    expect(await resolveVideoFile('dir', root)).toBeNull();
+  });
+  it('returns the real path of a symlink that stays inside the volume', async () => {
+    const file = await resolveVideoFile('link.mp4', root);
+    expect(file?.path).toBe(realpathSync(join(root, 'real.mp4')));
+  });
+});
+
+describe('stream route: ETag, lookup failures and log status', () => {
+  let owner: { user_id: string; cookie: string };
+  let videoId: string;
+  const logEntry = (msg: string) => logs.split('\n').filter(Boolean).map((l) => JSON.parse(l)).find((l) => l.msg === msg);
+
+  beforeAll(async () => {
+    owner = await login();
+    videoId = await seedVideo(owner.user_id, BYTES);
+  });
+
+  it('builds the ETag from the hex size and the hex mtime in whole milliseconds', async () => {
+    const path = join(STORAGE, videoId, `${videoId}.mp4`);
+    utimesSync(path, 1700000000, 1700000000);
+    const res = await getStream(videoId, { cookie: owner.cookie });
+    const st = statSync(path);
+    expect(res.headers['etag']).toBe(`"${st.size.toString(16)}-${Math.floor(st.mtimeMs).toString(16)}"`);
+    expect(res.headers['etag']).toBe(`"3e8-${(1700000000000).toString(16)}"`);
+  });
+  it('changes the ETag when the file mtime changes', async () => {
+    const path = join(STORAGE, videoId, `${videoId}.mp4`);
+    utimesSync(path, 1700000000, 1700000000);
+    const a = (await getStream(videoId, { cookie: owner.cookie })).headers['etag'];
+    utimesSync(path, 1700000100, 1700000100);
+    const b = (await getStream(videoId, { cookie: owner.cookie })).headers['etag'];
+    expect(a).not.toBe(b);
+  });
+
+  it('logs status 200 and a null range for a full read', async () => {
+    logs = '';
+    await getStream(videoId, { cookie: owner.cookie });
+    const e = logEntry('video stream');
+    expect(e.status).toBe(200);
+    expect(e.range).toBeNull();
+  });
+  it('logs status 416 for an unsatisfiable range', async () => {
+    logs = '';
+    await getStream(videoId, { cookie: owner.cookie, range: 'bytes=5000-' });
+    const e = logEntry('video stream');
+    expect(e.status).toBe(416);
+    expect(e.range).toBe('bytes=5000-');
+  });
+  it('logs status 404 when the stored file is absent', async () => {
+    const id = await seedVideo(owner.user_id, BYTES, `${rand('nofile')}/x.mp4`);
+    logs = '';
+    await getStream(id, { cookie: owner.cookie });
+    expect(logEntry('video stream').status).toBe(404);
+  });
+
+  describe('lookup failures', () => {
+    const withLookup = async (impl: (a: { errorHandler: (e: { error: Error; code: number }) => void }) => Promise<unknown>) => {
+      const mod = await import('../../../../grpc/services/ownerVideos');
+      const spy = jest.spyOn(mod, 'getVideoForOwner').mockImplementation(impl as never);
+      try {
+        logs = '';
+        return await getStream(videoId, { cookie: owner.cookie });
+      } finally {
+        spy.mockRestore();
+      }
+    };
+
+    it('answers 500 and logs the failure when the lookup returns nothing and reports no error', async () => {
+      const res = await withLookup(async () => null);
+      expect(res.statusCode).toBe(500);
+      expect(res.json()).toEqual({ version: 'v1', error: { code: 'internal_error', message: 'internal error' } });
+      expect(logEntry('video stream').status).toBe(500);
+    });
+    it('answers 500 when an error is reported even though a video came back', async () => {
+      const res = await withLookup(async ({ errorHandler }) => {
+        errorHandler({ error: new Error('lookup-boom'), code: 500 });
+        return { video_id: videoId, video_path: `${videoId}/${videoId}.mp4` };
+      });
+      expect(res.statusCode).toBe(500);
+      expect(res.rawPayload.includes(BYTES)).toBe(false);
+      expect(logEntry('video stream lookup failed')).toBeDefined();
+      expect(logEntry('video stream').status).toBe(500);
+    });
   });
 });
