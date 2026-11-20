@@ -10,7 +10,8 @@ export default defineConfig({
   fullyParallel: false,
   retries: 0,
   timeout: 60_000,
-  reporter: [['list'], ['html', { open: 'never' }]],
+  outputDir: 'test-results',
+  reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   globalSetup: require.resolve('./src/support/global-setup'),
   globalTeardown: require.resolve('./src/support/global-teardown'),
   use: {

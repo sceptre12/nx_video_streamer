@@ -51,6 +51,8 @@ export async function waitForStack(timeoutMs = 240_000): Promise<void> {
 }
 
 export function stackUp(): void {
+  // apps/app1/Dockerfile COPYs dist/apps/app1; the image build has no network, so build the UI first.
+  sh('npx', ['--no-install', 'nx', 'build', 'app1']);
   // Long-running services first, then the one-shot seed (no --wait on an exiting container).
   compose(['up', '-d', '--build', ...LONG_RUNNING]);
   compose(['up', '-d', 'seed']);
