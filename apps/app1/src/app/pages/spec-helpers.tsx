@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import './jsdom-polyfill';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
