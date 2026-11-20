@@ -140,11 +140,11 @@ describe('GET /api/v1/library', () => {
     expect(res.json().videos.map((v: { video_id: string }) => v.video_id)).toEqual([mine]);
   });
 
-  it('sets Cache-Control: private, no-store and no X-Cache', async () => {
+  it('sets Cache-Control: private, no-store and X-Cache MISS (no Redis configured)', async () => {
     const u = await login();
     const res = await getLibrary(u.cookie);
     expect(res.headers['cache-control']).toBe('private, no-store');
-    expect(res.headers['x-cache']).toBeUndefined();
+    expect(res.headers['x-cache']).toBe('MISS');
   });
 
   describe('failure path', () => {

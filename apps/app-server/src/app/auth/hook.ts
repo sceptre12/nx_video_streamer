@@ -2,6 +2,8 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { SESSION_COOKIE, getJwtSecret } from './config';
 import { sendError } from './errors';
 import { verifySessionToken } from './token';
+import { getUser, setUser } from '../cache';
+import { getUserById } from '../grpc/services';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -36,5 +38,15 @@ export function registerAuthHook(fastify: FastifyInstance): void {
       return sendError(reply, 401, 'unauthenticated', 'authentication required');
     }
     request.sessionUserId = userId;
+    // The cache lookup follows JWT verification, never precedes it (contracts/cache-keys.md).
+    // user:v1:{user_id} is read-through; skipped entirely when Redis is not configured.
+    if (process.env.REDIS_URL && !(await getUser(userId))) {
+      const user = await getUserById({
+        requestObject: { user_id: userId },
+        callBack: () => undefined,
+        errorHandler: (e) => request.log.warn({ err: e.error }, 'user lookup for cache failed'),
+      });
+      if (user) await setUser(userId, user);
+    }
   });
 }

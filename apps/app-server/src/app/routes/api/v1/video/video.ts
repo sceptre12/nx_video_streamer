@@ -10,6 +10,7 @@ import type {ICreateVideoBody, IUpdateVideoStreamingStateBody, IUpdateVideoStrea
 import { createVideo, updateVideoStreamingState } from './../../../../grpc/services';
 import type {} from './../../../../auth/hook'; // brings in the FastifyRequest.sessionUserId augmentation
 import { sendError } from './../../../../auth/errors';
+import { invalidateLibrary } from './../../../../cache';
 import type { ErrorResponseParam } from '../../../utils/errorHandler';
 
 /** Collects the first error a grpc wrapper reports so the route can map it to the contract shape. */
@@ -50,6 +51,7 @@ export default async function(fastify: FastifyInstance) {
       request.log.error({ err: e.seen[0]?.error }, 'create video failed');
       return sendInternal(reply);
     }
+    await invalidateLibrary(request.sessionUserId as string);
     return reply.send({ version: 'v1', ...created.results });
   })
 
@@ -77,6 +79,7 @@ export default async function(fastify: FastifyInstance) {
       request.log.error({ err: e.seen[0]?.error }, 'update video failed');
       return sendInternal(reply);
     }
+    await invalidateLibrary(request.sessionUserId as string);
     return reply.send({ version: 'v1', ...updated })
   })
 }
