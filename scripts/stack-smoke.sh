@@ -20,8 +20,14 @@ dk() {
     DOCKER_CONFIG="${dk_config}" docker "$@"
   fi
 }
+# Compose command, decided once here (not per call, and before any subshell use):
+# the Docker Compose plugin when it answers, else the standalone docker-compose.
+dkc_cmd=(docker-compose)
+if DOCKER_CONFIG="${dk_config}" DOCKER_HOST="${dk_host}" docker compose version >/dev/null 2>&1; then
+  dkc_cmd=(docker compose)
+fi
 dkc() {
-  DOCKER_CONFIG="${dk_config}" DOCKER_HOST="${dk_host}" docker-compose "$@"
+  DOCKER_CONFIG="${dk_config}" DOCKER_HOST="${dk_host}" "${dkc_cmd[@]}" "$@"
 }
 fail() { echo "STACK-SMOKE-FAIL: $*" >&2; exit 1; }
 
