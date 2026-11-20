@@ -1,8 +1,11 @@
+import { execFileSync } from 'child_process';
 import { createHmac, randomBytes } from 'crypto';
 import Fastify, { FastifyInstance } from 'fastify';
 import * as jwt from 'jsonwebtoken';
 import cookiePlugin from '../plugins/cookie';
 import jwtAuthPlugin from '../plugins/jwt-auth';
+import * as cache from '../cache';
+import * as services from '../grpc/services/users';
 import { SESSION_COOKIE } from './config';
 
 /* No docker or db-server needed: the hook only verifies the cookie. JWT_SECRET is generated here. */
@@ -116,5 +119,98 @@ describe('startup and cors', () => {
     // the grpc client is created when a route module loads; close its channel so jest exits cleanly
     const client = (await import('../grpc')).default;
     client.close();
+  });
+});
+
+/* sessionUser and the Redis shutdown wiring: a throwaway redis:7 container, getUserById spied (no db-server). */
+describe('auth hook user cache and shutdown', () => {
+  const dockerEnv = (): NodeJS.ProcessEnv => {
+    if (process.env.DOCKER_HOST) return process.env;
+    try {
+      execFileSync('docker', ['version', '--format', '{{.Server.Version}}'], { stdio: 'pipe' });
+      return process.env;
+    } catch {
+      return { ...process.env, DOCKER_HOST: 'unix:///Users/xavier/.orbstack/run/docker.sock' };
+    }
+  };
+  const env = dockerEnv();
+  const docker = (args: string[]) => execFileSync('docker', args, { env, encoding: 'utf8', stdio: 'pipe' }).trim();
+  const cname = `st6-hook-redis-${randomBytes(4).toString('hex')}`;
+  const savedRedis = process.env.REDIS_URL;
+  const uid = 'user-' + randomBytes(4).toString('hex');
+  const dbUser = { user_id: uid, username: 'alice', password_hash: 'not-a-real-hash' };
+  const token = () => jwt.sign({}, SECRET, { algorithm: 'HS256', subject: uid, expiresIn: 60 });
+
+  async function cacheApp(): Promise<FastifyInstance> {
+    process.env.JWT_SECRET = SECRET;
+    const f = Fastify();
+    await f.register(cookiePlugin);
+    await f.register(jwtAuthPlugin);
+    f.get('/api/v1/whoami', async (req) => ({ sessionUser: req.sessionUser ?? null }));
+    await f.ready();
+    return f;
+  }
+
+  beforeAll(async () => {
+    docker(['run', '-d', '--name', cname, '-p', '127.0.0.1::6379', 'redis:7']);
+    const port = docker(['port', cname, '6379/tcp']).split('\n')[0].split(':').pop();
+    process.env.REDIS_URL = `redis://127.0.0.1:${port}`;
+    for (let i = 0; i < 30; i++) {
+      if (await cache.isCacheReady()) break;
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  });
+  afterAll(async () => {
+    await cache.closeClient();
+    if (savedRedis === undefined) delete process.env.REDIS_URL;
+    else process.env.REDIS_URL = savedRedis;
+    try { docker(['rm', '-f', cname]); } catch { /* already gone */ }
+  });
+
+  it('sets request.sessionUser from the RPC on a MISS and from the cache on a HIT (no second getUserById)', async () => {
+    const f = await cacheApp();
+    const spy = jest.spyOn(services, 'getUserById').mockResolvedValue(dbUser as never);
+    try {
+      const miss = await withCookie(f, token(), '/api/v1/whoami');
+      expect(miss.json()).toEqual({ sessionUser: { user_id: uid, username: 'alice' } });
+      expect(spy).toHaveBeenCalledTimes(1);
+      const hit = await withCookie(f, token(), '/api/v1/whoami');
+      expect(hit.json()).toEqual({ sessionUser: { user_id: uid, username: 'alice' } });
+      expect(spy).toHaveBeenCalledTimes(1);
+    } finally {
+      spy.mockRestore();
+      await f.close();
+    }
+  });
+
+  it('serves the request without calling getUserById when Redis is unreachable', async () => {
+    const f = await cacheApp();
+    const spy = jest.spyOn(services, 'getUserById').mockResolvedValue(dbUser as never);
+    const saved = process.env.REDIS_URL;
+    try {
+      await cache.closeClient();
+      process.env.REDIS_URL = 'redis://127.0.0.1:1';
+      for (let i = 0; i < 2; i++) {
+        const res = await withCookie(f, token(), '/api/v1/whoami');
+        expect(res.statusCode).toBe(200);
+        expect(res.json()).toEqual({ sessionUser: null });
+      }
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+      process.env.REDIS_URL = saved;
+      await f.close();
+    }
+  });
+
+  it('closes the Redis client when the Fastify instance closes, and a second close is harmless', async () => {
+    const f = await cacheApp();
+    const client = (await import('../cache/redis-cache')).getClient();
+    expect(client).not.toBeNull();
+    await f.close();
+    for (let i = 0; i < 20 && client?.status !== 'end'; i++) await new Promise((r) => setTimeout(r, 50));
+    expect(client?.status).toBe('end');
+    await expect(cache.closeClient()).resolves.toBeUndefined();
+    await expect(cache.closeClient()).resolves.toBeUndefined();
   });
 });

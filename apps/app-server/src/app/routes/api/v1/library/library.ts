@@ -8,10 +8,18 @@ import type {} from '../../../../auth/hook'; // brings in the FastifyRequest.ses
 import { sendError } from '../../../../auth/errors';
 import { listVideosByOwner } from '../../../../grpc/services';
 import type { ErrorResponseParam } from '../../../utils/errorHandler';
+import { getLibrary, setLibrary } from '../../../../cache';
 import { toLibraryVideo } from './library_mapper';
 
 export default async function (fastify: FastifyInstance) {
   fastify.get('/', async (request, reply) => {
+    const owner = request.sessionUserId as string;
+    const cached = await getLibrary(owner);
+    if (cached) {
+      reply.header('Cache-Control', 'private, no-store');
+      reply.header('X-Cache', 'HIT');
+      return reply.status(200).send(cached);
+    }
     const seen: ErrorResponseParam[] = [];
     const list = await listVideosByOwner({
       requestObject: { owner_id: request.sessionUserId as string },
@@ -24,7 +32,10 @@ export default async function (fastify: FastifyInstance) {
     }
     const videos = list.map(toLibraryVideo);
     request.log.info({ user_id: request.sessionUserId, video_count: videos.length }, 'library listed');
+    const body = { version: 'v1', videos };
+    await setLibrary(owner, body);
     reply.header('Cache-Control', 'private, no-store');
-    return reply.status(200).send({ version: 'v1', videos });
+    reply.header('X-Cache', 'MISS');
+    return reply.status(200).send(body);
   });
 }
