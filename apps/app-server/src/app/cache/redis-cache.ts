@@ -32,12 +32,41 @@ export function getClient(): Redis | null {
   return client;
 }
 
-/** Closes the client (spec teardown, shutdown). */
+/** Closes the client (spec teardown, shutdown). Idempotent; a no-op when no client exists. */
 export async function closeClient(): Promise<void> {
   const c = client;
   client = null;
   clientUrl = undefined;
   if (c) c.disconnect();
+}
+
+/**
+ * True only when REDIS_URL is set and the client is connected. While the first connection is still
+ * being made it waits (bounded by connectTimeout) for ready or failure; once Redis is known to be
+ * unreachable (reconnecting/closed) it answers false at once, so callers can skip cache work.
+ */
+export async function isCacheReady(): Promise<boolean> {
+  const c = getClient();
+  if (!c) return false;
+  if (c.status === 'ready') return true;
+  if (c.status !== 'connecting' && c.status !== 'wait') return false;
+  return new Promise<boolean>((resolve) => {
+    const done = (ok: boolean) => {
+      clearTimeout(timer);
+      c.off('ready', onReady);
+      c.off('error', onFail);
+      c.off('close', onFail);
+      c.off('end', onFail);
+      resolve(ok);
+    };
+    const onReady = () => done(true);
+    const onFail = () => done(false);
+    const timer = setTimeout(onFail, 700);
+    c.once('ready', onReady);
+    c.once('error', onFail);
+    c.once('close', onFail);
+    c.once('end', onFail);
+  });
 }
 
 /** Read: returns the parsed JSON value, or null on a MISS or any Redis error (never throws). */

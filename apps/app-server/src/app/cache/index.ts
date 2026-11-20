@@ -3,13 +3,19 @@ import {
   USER_TTL_S,
   closeClient,
   deleteKey,
+  isCacheReady,
   libraryKey,
   readJson,
   userKey,
   writeJson,
 } from './redis-cache';
 
-export { closeClient, libraryKey, userKey, LIBRARY_TTL_S, USER_TTL_S };
+export { closeClient, isCacheReady, libraryKey, userKey, LIBRARY_TTL_S, USER_TTL_S };
+
+/** Closes the Redis client when the Fastify instance closes (onClose). Call once per instance. */
+export const registerCacheShutdown = (fastify: { addHook(name: 'onClose', fn: () => Promise<void>): unknown }): void => {
+  fastify.addHook('onClose', closeClient);
+};
 
 /** The cached `user:v1:{user_id}` value: never carries password_hash. */
 export interface CachedUser {
