@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "esModuleInterop": true,
+    "module": "commonjs",
+    "target": "es2021",
+    "strict": true,
+    "types": ["node"],
+    "outDir": "../../dist/out-tsc"
+  },
+  "include": ["**/*.ts", "playwright.config.ts"],
+  "exclude": ["test-results", "playwright-report", "blob-report"]
+}

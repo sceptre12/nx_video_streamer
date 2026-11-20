@@ -1,0 +1,16 @@
+{
+  "name": "stack-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/stack-e2e/src",
+  "projectType": "application",
+  "tags": [],
+  "implicitDependencies": [],
+  "targets": {
+    "e2e": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx playwright test -c apps/stack-e2e/playwright.config.ts"
+      }
+    }
+  }
+}
