@@ -1,0 +1,12 @@
+.env
+.env.*
+node_modules
+dist
+.git
+.nx
+tmp
+coverage
+plans
+.tasks
+.decisions
+**/*.spec.ts
