@@ -70,11 +70,18 @@ export async function isCacheReady(): Promise<boolean> {
   });
 }
 
+/** Fail-open short circuit when the client is not ready: same warning as a Redis error, no command is sent. */
+function notReady(op: string): null {
+  warn(op, new Error('redis not ready'));
+  return null;
+}
+
 /** Read: returns the parsed JSON value, or null on a MISS or any Redis error (never throws). */
 export async function readJson<T>(key: string): Promise<T | null> {
   try {
     const c = getClient();
     if (!c) return null;
+    if (!(await isCacheReady())) return notReady(`get ${key}`);
     const raw = await c.get(key);
     return raw === null ? null : (JSON.parse(raw) as T);
   } catch (err) {
@@ -88,6 +95,7 @@ export async function writeJson(key: string, value: unknown, ttlS: number): Prom
   try {
     const c = getClient();
     if (!c) return;
+    if (!(await isCacheReady())) return void notReady(`set ${key}`);
     await c.set(key, JSON.stringify(value), 'EX', ttlS);
   } catch (err) {
     warn(`set ${key}`, err);
@@ -99,6 +107,7 @@ export async function deleteKey(key: string): Promise<void> {
   try {
     const c = getClient();
     if (!c) return;
+    if (!(await isCacheReady())) return void notReady(`del ${key}`);
     await c.del(key);
   } catch (err) {
     warn(`del ${key}`, err);

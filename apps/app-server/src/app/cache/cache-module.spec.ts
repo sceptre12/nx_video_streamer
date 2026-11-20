@@ -90,3 +90,35 @@ describe('cache module', () => {
     warn.mockRestore();
   });
 });
+
+describe('cache module latency while Redis is unreachable', () => {
+  const BOUND_MS = 300;
+  const timed = async (fn: () => Promise<unknown>) => {
+    const t0 = Date.now();
+    await fn();
+    return Date.now() - t0;
+  };
+
+  it('answers get, set and delete at once (MISS / no-op) with Redis stopped after a first connect', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await getLibrary('u1');
+    for (let i = 0; i < 3; i++) {
+      expect(await timed(async () => expect(await getLibrary('u1')).toBeNull())).toBeLessThan(BOUND_MS);
+      expect(await timed(() => setLibrary('u1', { x: 1 }))).toBeLessThan(BOUND_MS);
+      expect(await timed(() => invalidateLibrary('u1'))).toBeLessThan(BOUND_MS);
+    }
+    warn.mockRestore();
+  });
+
+  it('answers at once against a closed port once the first connect has failed', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await closeClient();
+    process.env.REDIS_URL = 'redis://127.0.0.1:1';
+    await getLibrary('u1');
+    await new Promise((r) => setTimeout(r, 100));
+    expect(await timed(async () => expect(await getLibrary('u1')).toBeNull())).toBeLessThan(BOUND_MS);
+    expect(await timed(() => setLibrary('u1', { x: 1 }))).toBeLessThan(BOUND_MS);
+    expect(await timed(() => invalidateLibrary('u1'))).toBeLessThan(BOUND_MS);
+    warn.mockRestore();
+  });
+});

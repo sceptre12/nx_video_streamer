@@ -201,4 +201,18 @@ describe('cache wiring', () => {
     const created = await post('/api/v1/video/create', { video_id: rand('vid'), start_time: 1 }, a.cookie);
     expect(created.statusCode).toBe(200);
   });
+  it('keeps latency low with Redis stopped: library MISS and video create answer quickly', async () => {
+    const a = await login();
+    for (let i = 0; i < 3; i++) {
+      const t0 = Date.now();
+      const res = await getLibrary(a.cookie);
+      expect(Date.now() - t0).toBeLessThan(600);
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['x-cache']).toBe('MISS');
+    }
+    const t1 = Date.now();
+    const created = await post('/api/v1/video/create', { video_id: rand('vid'), start_time: 1 }, a.cookie);
+    expect(Date.now() - t1).toBeLessThan(600);
+    expect(created.statusCode).toBe(200);
+  });
 });
