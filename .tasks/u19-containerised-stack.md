@@ -2,7 +2,7 @@
 
 > Branch: `GH-13-containerised-stack-u19`   Worktree: `/Users/xavier/delivery/worktrees/run-1-20261117-st9-u19`
 > Brief (informational copy; the binding `Brief:` line is the one in the work_item instruction, C1.2): skills/delivery-run/references/briefs-v2/implementer.md
-> Ticket: GH-13   Sub-task: st9 (`GH-13-containerised-stack`)   Persona / tier: implementer / design   Budget: 15 min (repo profile durations.unit_median_min)
+> Ticket: GH-13   Sub-task: st9 (`GH-13-containerised-stack`)   Persona / tier: implementer / execute   Budget: 15 min (repo profile durations.unit_median_min)
 
 ## 1. Objective
 Write docker-compose.yml (ui, app-server, db-server, postgres, redis, one-shot seed), scripts/stack-env.sh (run-time secrets, never overwrites an existing .env) and scripts/stack-smoke.sh (bring-up and asserts).
@@ -18,6 +18,7 @@ Write docker-compose.yml (ui, app-server, db-server, postgres, redis, one-shot s
 - docker-compose.yml
 - scripts/stack-env.sh
 - scripts/stack-smoke.sh
+- .dockerignore (one added negation line only: !dist/apps/app1; plan P4 u19 scope cell, coordinator ruling)
 **Out of scope:**
 1. Dockerfiles and nginx.conf (u17, u18).
 2. README.md (u20).

@@ -1,0 +1,123 @@
+# Containerised stack. Run scripts/stack-env.sh first to create the git-ignored .env.
+# Only `ui` publishes a host port; every other service is reachable on the compose network only.
+name: ${COMPOSE_PROJECT_NAME:-nvs-stack}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nvs}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run scripts/stack-env.sh}
+      POSTGRES_DB: ${POSTGRES_DB:-nvs}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+  db-server:
+    build:
+      context: .
+      dockerfile: apps/db-server/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nvs}:${POSTGRES_PASSWORD:?run scripts/stack-env.sh}@postgres:5432/${POSTGRES_DB:-nvs}
+      DIRECT_URL: postgresql://${POSTGRES_USER:-nvs}:${POSTGRES_PASSWORD:?run scripts/stack-env.sh}@postgres:5432/${POSTGRES_DB:-nvs}
+      JWT_SECRET: ${JWT_SECRET:?run scripts/stack-env.sh}
+      COOKIE_SECURE: "false"
+      REDIS_URL: redis://redis:6379
+      VIDEO_STORAGE_DIR: /data/videos
+      HOST: 0.0.0.0
+      PORT: "3001"
+      GRPC_PORT: "50051"
+      UI_HOST_PORT: ${UI_HOST_PORT:-36000}
+    volumes:
+      - video-data:/data/videos
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('net').connect(3001,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+
+  app-server:
+    build:
+      context: .
+      dockerfile: apps/app-server/Dockerfile
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?run scripts/stack-env.sh}
+      COOKIE_SECURE: "false"
+      REDIS_URL: redis://redis:6379
+      VIDEO_STORAGE_DIR: /data/videos
+      DB_GRPC_ADDR: db-server:50051
+      HOST: 0.0.0.0
+      PORT: "3002"
+    volumes:
+      - video-data:/data/videos:ro
+    depends_on:
+      db-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('net').connect(3002,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 10s
+
+  ui:
+    build:
+      context: .
+      dockerfile: apps/app1/Dockerfile
+    ports:
+      - "${UI_HOST_PORT:-36000}:8080"
+    depends_on:
+      app-server:
+        condition: service_healthy
+      db-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # One-shot demo seed: reuses the db-server build, overrides the default
+  # entrypoint (migrate + listen) so no second db-server starts, exits 0.
+  seed:
+    build:
+      context: .
+      dockerfile: apps/db-server/Dockerfile
+    entrypoint: []
+    command: ["node", "apps/db-server/prisma/seed.js"]
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nvs}:${POSTGRES_PASSWORD:?run scripts/stack-env.sh}@postgres:5432/${POSTGRES_DB:-nvs}
+      DIRECT_URL: postgresql://${POSTGRES_USER:-nvs}:${POSTGRES_PASSWORD:?run scripts/stack-env.sh}@postgres:5432/${POSTGRES_DB:-nvs}
+      VIDEO_STORAGE_DIR: /data/videos
+      DEMO_USER1_PASSWORD: ${DEMO_USER1_PASSWORD:?run scripts/stack-env.sh}
+      DEMO_USER2_PASSWORD: ${DEMO_USER2_PASSWORD:?run scripts/stack-env.sh}
+    volumes:
+      - video-data:/data/videos
+    depends_on:
+      db-server:
+        condition: service_healthy
+
+volumes:
+  pg-data:
+  video-data:

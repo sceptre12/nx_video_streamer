@@ -5,7 +5,7 @@ I created this project as a way to learn several technoligies on a small scale.
 - Nx
 - Module Federation
 - Grpc
-- Superbase (to an extent)
+- Postgres and Redis (in containers)
 
 
 ## To get up and running
@@ -31,16 +31,35 @@ The current process that are setup are:
 - db-server
 
 
-To set up superbase with this project.
-1. create an .env file in the db-server project
-2. Create a superbase account
-3. Follow Step 1 from this [guide] (https://supabase.com/partners/integrations/prisma)
+## Run the containerised stack
 
-In your .env file create this:
+The stack runs under Docker Compose with these services: `ui` (nginx serving the built app1 and proxying `/api` to app-server and `/socket.io` to db-server), `app-server`, `db-server`, `postgres`, `redis`, and `seed` (a one-shot service that loads the demo accounts and videos, then exits).
+
+1. Generate the git-ignored `.env` file (never committed):
+
 ```
-DATABASE_URL="" # Set this to the Transaction connection pooler string you copied in Step 1
-DIRECT_URL=""  # Set this to the Session connection pooler string you copied in Step 1
+bash scripts/stack-env.sh
 ```
+
+It writes random values for `JWT_SECRET`, `POSTGRES_PASSWORD`, `DEMO_USER1_PASSWORD` and `DEMO_USER2_PASSWORD`. Do not copy these values into any tracked file.
+
+2. Build app1 on the host first, because the ui image copies the git-ignored `dist/apps/app1`:
+
+```
+npx nx build app1
+```
+
+3. Start the stack:
+
+```
+docker compose up --build
+```
+
+4. Open http://localhost:36000. This is the only port published to the host (`UI_HOST_PORT`, default 36000); the other services are reachable only on the compose network.
+
+Demo accounts: the usernames are `demo1` and `demo2`. Their passwords are the values of `DEMO_USER1_PASSWORD` and `DEMO_USER2_PASSWORD` in your generated `.env`.
+
+Postgres runs as the `postgres` container; `DATABASE_URL` and `DIRECT_URL` are set to the same value in compose.
 
 ## Major Technologies I'm focused on 
 
@@ -69,6 +88,6 @@ I'm interested in seeing what issues may arise from having different versions of
 I'm using this tool to send instructions between my App server and the Db server. 
 
 
-### [SuperBase](https://supabase.com/) open source alternative for firebase but using postgress. 
+### [Postgres](https://www.postgresql.org/) and [Redis](https://redis.io/)
 
-I'm using this tool to store meta data for the work I'm doing. Nothing major here. 
+I'm using Postgres to store meta data for the work I'm doing, and Redis as a cache. Both run as containers in the compose stack. Nothing major here.
